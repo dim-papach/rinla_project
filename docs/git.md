@@ -1,9 +1,3 @@
-# Table of Contents
-
-1. [What is Git](#orgf36e306)
-2. [How to use Git](#orgfa2bcf4)
-3. [Useful reads](#orgb75c4ce)
-
 # What is Git
 
 Git is a tool used by developers to manage and track changes in their code. It helps teams collaborate on projects without overwriting each other’s work.
