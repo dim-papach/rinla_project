@@ -1,8 +1,3 @@
-# Table of Contents
-
-1. [Quick installation](#org3da06c5)
-2. [Quick Guides](#org98e429a)
-
 This project is based on the work of [Spatial field reconstruction with INLA: application to IFU galaxy data](https://academic.oup.com/mnras/article/482/3/3880/5144230) and [Spatial field reconstruction with INLA: Application to simulated galaxies](https://www.aanda.org/10.1051/0004-6361/202244481).
 
 It uses the R-INLA package to fill missing values in FITS images of astrophysical objects. Our main focus is to test the accuracy and efficiency of this method.

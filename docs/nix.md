@@ -1,13 +1,4 @@
-# Table of Contents
 
-1. [What is Nix?](#org656a59a)
-2. [Why Use Nix?](#orgc1b89bb)
-3. [How Nix Works:](#org2155157)
-4. [Using Nix for Data Analysis:](#orgce580b0)
-5. [The `rix` tool](#orga51c507)
-6. [Quick Tutorial:](#orgbb93d5c)
-   1. [How to use Nix](#org8ee5ca5)
-7. [Useful reads](#org69794c5)
 
 It is possible to just download neccesary packages via CRAN or the package manager of your choice. However it is preferred if you used the Nix package manager, since it focuses on making the code reproducible and easier to deploy.
 
