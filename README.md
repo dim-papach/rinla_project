@@ -18,7 +18,7 @@ To make sure you don&rsquo;t have a dependency problem, follow the instructions
   ```shell
   git clone https://github.com/dim-papach/rinla_project.git# clone the repository
   
-  cd # move into the directory
+  cd rinla_project# move into the directory
   ```
 
 - Build the Nix environment
@@ -39,5 +39,5 @@ To make sure you don&rsquo;t have a dependency problem, follow the instructions
 
 # Quick Guides
 
-- [Git](./guides/git.md)
-- [Nix](./guides/nix.md)
+- [Git](./docs/git.md)
+- [Nix](./docs/nix.md)
