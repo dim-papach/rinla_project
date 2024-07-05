@@ -16,7 +16,7 @@ To make sure you don&rsquo;t have a dependency problem, follow the instructions
 - Clone the repository
   
   ```shell
-  git clone # clone the repository
+  git clone https://github.com/dim-papach/rinla_project.git# clone the repository
   
   cd # move into the directory
   ```
