@@ -1,11 +1,47 @@
 let
 # Importing Nixpkgs at a specific commit
- pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/ad7efee13e0d216bf29992311536fce1d3eefbef.tar.gz") {};
+ pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/eb090f7b923b1226e8beb954ce7c8da99030f4a8.tar.gz") {};
 
 # List of R packages to be included
  rpkgs = builtins.attrValues {
-  inherit (pkgs.rPackages) devtools lattice latticeExtra rmarkdown FITSio reshape2 classInt imager fields latex2exp viridis rasterVis IDPmisc reticulate yaml gtools data_table spatstat colorspace ggplot2 spam sp stringr rgl beepr codetools inlabru fmesher target crew here;
-};
+  inherit (pkgs.rPackages) 
+    autokeras
+    beepr 
+    classInt 
+    codetools 
+    colorspace 
+    crew 
+    data_table 
+    devtools 
+    fields 
+    FITSio 
+    fmesher 
+    ggplot2 
+    gtools 
+    here 
+    IDPmisc 
+    imager 
+    inlabru 
+    jjb
+    jsonlite 
+    languageserver 
+    lattice 
+    latticeExtra 
+    latex2exp 
+    MASS
+    rgl 
+    rlang 
+    rmarkdown 
+    rasterVis 
+    reshape2 
+    reticulate 
+    spam 
+    sp 
+    spatstat 
+    stringr 
+    target 
+    viridis 
+    yaml;};
 
 # Git archive packages to be fetched
  git_archive_pkgs = [(pkgs.rPackages.buildRPackage {
@@ -20,10 +56,11 @@ let
       inherit (pkgs.rPackages) assertthat raster RColorBrewer sp reshape2 tidyr cowplot ggplot2;
     };
   }) ];
+
  
 # System packages to be included (Downloaded from the nixpkgs repo)
   system_packages = builtins.attrValues {
-  inherit (pkgs) R glibcLocales nix gnugrep glibc python3;
+  inherit (pkgs) R glibcLocales nix gnugrep glibc python3 toybox;
 };
 
 # RStudio packages to be included
@@ -31,10 +68,19 @@ let
   packages = [ git_archive_pkgs rpkgs ];
 };
 
-# Python packages to be included
- python_pkgs = builtins.attrValues{
-  inherit (pkgs.python311Packages) numpy pandas matplotlib astropy;
-};
+  # Python 3.11 with --enable-shared for reticulate
+  python311 = pkgs.python311.overrideAttrs (oldAttrs: {
+    enableShared = true;
+  });
+
+
+
+  # Python packages to be included
+  python_pkgs = python311.withPackages (ps: with ps; [
+    numpy pandas matplotlib astropy radian
+  ]);
+
+
  in
   pkgs.mkShell {
     LOCALE_ARCHIVE = if pkgs.system == "x86_64-linux" then  "${pkgs.glibcLocales}/lib/locale/locale-archive" else "";
@@ -47,5 +93,11 @@ let
 
     buildInputs = [ git_archive_pkgs rpkgs  system_packages rstudio_pkgs python_pkgs];
       
+  shellHook = ''
+    export RETICULATE_PYTHON=$(which python3)
+    #export LD_LIBRARY_PATH=${pkgs.glibc}/lib:$LD_LIBRARY_PATH
+
+  '';
+
     QT_XCB_GL_INTEGRATION="none";
   }
