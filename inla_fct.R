@@ -182,11 +182,11 @@ else if(shape=='none') {
     outputsd <- inla.mesh.project(inla.mesh.projector(mesh,xlim=c(xini,xfin),ylim=c(yini,yfin),dim=c(xsize+1,ysize+1)),res$summary.random$i$sd)
 }    
     
-#zoom    
-#if (zoom != 1){
-#    output <- zoom_fix(output,zoom)
-#    outputsd <- zoom_fix(outputsd,zoom)
-#}
+zoom    
+if (zoom != 1){
+    output <- zoom_fix(output,zoom)
+    outputsd <- zoom_fix(outputsd,zoom)
+}
     
 #original data to compare
 xbin <- (xfin-xini)/(xsize+1)
