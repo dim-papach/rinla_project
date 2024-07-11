@@ -33,16 +33,26 @@ prepare_data <- function(img) {
 }
 
 
-stationary_inla <- function(tx, ty, tpar, tepar, weight=1, zoom = 1,
+stationary_inla <- function(prepared_data, weight=1, zoom = 1,
                             xini=0,yini=0,xfin=77,yfin=77,
                             nonstationary=FALSE,restart=0L,
                             xsize=77,ysize=77,shape='ellipse',tolerance=1e-4,
                             p_range=c(2,0.2),p_sigma=c(2,0.2),cutoff=5){
 
-        
-    x <- tx
-    y <- ty
-    par <- tpar
+    # Extract variables
+    valid <- prepared_data$valid
+    tx <- prepared_data$x
+    ty <- prepared_data$y
+    xsize <- prepared_data$xsize
+    ysize <- prepared_data$ysize
+    xfin <- prepared_data$xfin
+    yfin <- prepared_data$yfin
+    logimg <- prepared_data$logimg
+
+    x <- tx[valid]
+    y <- ty[valid]
+
+    par <- logimg[valid]
     if (hasArg(tepar)) { epar <- tepar^2 } else { epar <- NULL}
 
     # Create a mesh (tesselation) 
@@ -221,7 +231,7 @@ stationary_inla <- function(tx, ty, tpar, tepar, weight=1, zoom = 1,
     return(list(out=output, image=timage, erimage=terrimage,outsd=outputsd, x=xx,y=yy,z=zz,erz=erzz))
 }
 
-plot_and_save_inla_results <- function(inla_result, title_prefix = "INLA Result", output_dir = "plots") {
+plot_inla <- function(inla_result, title_prefix = "INLA Result", output_dir = "plots") {
   # Create the output directory if it doesn't exist
   if (!dir.exists(output_dir)) {
     dir.create(output_dir)

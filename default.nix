@@ -15,6 +15,9 @@ let
     devtools 
     fields 
     FITSio 
+    future
+    future_batchtools
+    future_callr
     fmesher 
     ggplot2 
     gtools 
@@ -39,8 +42,9 @@ let
     sp 
     spatstat 
     stringr 
-    target 
+    targets 
     viridis 
+    visNetwork
     yaml;};
 
 # Git archive packages to be fetched

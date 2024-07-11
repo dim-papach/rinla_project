@@ -55,7 +55,7 @@ source(paste("./inla_fct.R",sep=''))
 name <- "stavros"
 
 dir <- paste("./first_results/",sep='')
-file <- paste(dir,"galactic_center_masked_10",sep='')
+file <- paste("galactic_center_masked_10",sep='')
 outfile <- paste(file,"inla",sep='-')
 eroutfile <- paste(file,"erinla",sep='-')
 
