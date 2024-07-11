@@ -100,6 +100,7 @@ let
   shellHook = ''
     export RETICULATE_PYTHON=$(which python3)
     #export LD_LIBRARY_PATH=${pkgs.glibc}/lib:$LD_LIBRARY_PATH
+    Rscript -e 'if (!requireNamespace("INLA", quietly = TRUE)) { if (!requireNamespace("remotes", quietly = TRUE)) { install.packages("remotes") }; remotes::install_version("INLA", version = "23.05.30", repos = c(getOption("repos"), INLA = "https://inla.r-inla-download.org/R/testing")) } else { cat("INLA is already installed.\n") }'
 
   '';
 
