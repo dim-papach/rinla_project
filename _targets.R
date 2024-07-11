@@ -52,6 +52,6 @@ list(
   tar_target(file,"data.fits", format = "file"),
   tar_target(data, get_data(file)),
   tar_target(prepared, prepare_data(data)),
-  tar_target(model, stationary_inla(data)),
+  tar_target(model, stationary_inla(prepared)),
   tar_target(plot, plot_inla(model, data))
 )
