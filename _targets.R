@@ -9,7 +9,7 @@ library(targets)
 
 # Set target options:
 tar_option_set(
-  packages = rownames(installed.packages())# packages that your targets need to run
+  packages = c("INLA", "IDPmisc", "rasterVis", "viridis", "latex2exp", "fields", "lattice", "latticeExtra", "classInt", "reshape2", "FITSio", "MASS", "targets")# packages that your targets need to run
   # format = "qs", # Optionally set the default storage format. qs is fast.
   #
   # For distributed computing in tar_make(), supply a {crew} controller
@@ -53,5 +53,7 @@ list(
   tar_target(data, get_data(file)),
   tar_target(prepared, prepare_data(data)),
   tar_target(model, stationary_inla(prepared)),
-  tar_target(plot, plot_inla(model, data))
+  
+  #tar_target(plot, plot_and_save_images(prepared, model))
+  tar_target(plot, plot_inla(model))
 )
