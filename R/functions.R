@@ -198,11 +198,11 @@ stationary_inla <- function(prepared_data, weight=1, zoom = 1,
         outputsd <- inla.mesh.project(inla.mesh.projector(mesh,xlim=c(xini,xfin),ylim=c(yini,yfin),dim=c(xsize+1,ysize+1)),res$summary.random$i$sd)
     }    
         
-    zoom    
-    if (zoom != 1){
-        output <- zoom_fix(output,zoom)
-        outputsd <- zoom_fix(outputsd,zoom)
-    }
+   # zoom    
+   # if (zoom != 1){
+   #     output <- zoom_fix(output,zoom)
+   #     outputsd <- zoom_fix(outputsd,zoom)
+   # }
         
     #original data to compare
     xbin <- (xfin-xini)/(xsize+1)
@@ -229,6 +229,53 @@ stationary_inla <- function(prepared_data, weight=1, zoom = 1,
 
         
     return(list(out=output, image=timage, erimage=terrimage,outsd=outputsd, x=xx,y=yy,z=zz,erz=erzz))
+}
+plot_and_save_images <- function(pr_data, imginla, outfile, eroutfile) {
+  x <- pr_data$x
+  y <- pr_data$y
+  logimg <- pr_data$logimg
+  valid <- pr_data$valid
+  ysize <- pr_data$ysize
+  xsize <- pr_data$xsize
+  inla_out <-imginla$out
+  imginla_out <- imginla$out
+  imginla_outsd <- imginla$outsd
+  imginla_out[is.nan(imginla_out)] <- 0
+  imginla_out[is.na(imginla_out)] <- 0
+  imginla_outsd[is.nan(imginla_outsd)] <- 0
+  imginla_outsd[is.na(imginla_outsd)] <- 0
+  logimg[is.nan(logimg)] <- 0
+  logimg[is.na(logimg)] <- 0
+  cutColor <- 100
+  name <- "test"
+  colpal <- viridis::viridis(100)
+  ## PLOT
+  fj5_img <- classIntervals(c(logimg[valid], imginla_out[valid]), 
+                            n = cutColor, style = "fisher")
+  
+  inimg <- levelplot(imginla$image, xlim = c(0, ysize), ylim = c(0, xsize),
+                     col.regions = colpal,
+                     main = list(name, side = 1, line = 0.5, cex = 1.4), 
+                     ylab = list('y [pixels]', cex = 1.5),
+                     cut = cutColor, at = fj5_img$brks,
+                     xlab = list('x [pixels]', cex = 1.3))
+  
+  outimg <- levelplot(imginla$out, xlim = c(0, ysize), ylim = c(0, xsize),
+                      col.regions = colpal, xlab = 'x', ylab = 'y',
+                      cut = cutColor, at = fj5_img$brks)
+  
+  fj5_erimg <- classIntervals(imginla_outsd[valid], n = 100, style = "fisher")
+  
+  outsdimg <- levelplot(imginla$outsd, xlim = c(0, ysize), ylim = c(0, xsize),
+                        col.regions = colpal, xlab = 'x', ylab = 'y',
+                        cut = cutColor, at = fj5_erimg$brks)
+  
+  save(x, y, logimg, imginla, file = paste(outfile, 'Rdata', sep = '.'))
+  writeFITSim(imginla$out, file = paste(outfile, 'fits', sep = '.'))
+  writeFITSim(imginla$outsd, file = paste(eroutfile, 'fits', sep = '.'))
+  
+  png(filename = paste(outfile, 'png', sep = '.'))
+  print(c(inimg, outimg, outsdimg, layout = c(3, 1)))
 }
 
 plot_inla <- function(inla_result, title_prefix = "INLA Result", output_dir = "plots") {
