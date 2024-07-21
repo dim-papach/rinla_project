@@ -26,7 +26,7 @@ To make sure you don&rsquo;t have a dependency problem, follow the instructions
 - Initiate and use the environment
   
   ```shell
-  nix-shell --pure #the --pure flag is so only the packages specified are loaded in the env. If you want some system packages inside the env you can ignore it
+  nix-shell --pure # the --pure flag is so only the packages specified are loaded in the env. If you want some system packages inside the env you can ignore it
   ```
   
   This opens a bash shell in you current directory and you can run your scripts
