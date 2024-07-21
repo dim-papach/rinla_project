@@ -11,9 +11,9 @@ To make sure you don&rsquo;t have a dependency problem, follow the instructions
 - Clone the repository
   
   ```shell
-  git clone https://github.com/dim-papach/rinla_project.git# clone the repository
+  git clone https://github.com/dim-papach/rinla_project.git # clone the repository
   
-  cd rinla_project# move into the directory
+  cd rinla_project # move into the directory
   ```
 
 - Build the Nix environment
