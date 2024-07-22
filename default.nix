@@ -14,6 +14,7 @@ let
     data_table 
     devtools 
     fields 
+    foreach
     FITSio 
     future
     future_batchtools
