@@ -72,6 +72,17 @@ let
   packages = [ git_archive_pkgs rpkgs ];
 };
 
+  # Definition for INLA package
+    inla = [(pkgs.rPackages.buildRPackage {
+            name = "INLA";
+            version = "23.05.30-1";
+            src = pkgs.fetchzip{
+	        url = "https://inla.r-inla-download.org/R/testing/src/contrib/INLA_23.05.30-1.tar.gz";
+	        sha256 = "sha256-LvZRUidUuWzBcgarqnC8i+fWnyJbTtjWGj7yOdFVNDg=";
+	        };
+}) ];
+
+
   # Python 3.11 with --enable-shared for reticulate
   python311 = pkgs.python311.overrideAttrs (oldAttrs: {
     enableShared = true;
@@ -95,11 +106,13 @@ let
     LC_PAPER = "en_US.UTF-8";
     LC_MEASUREMENT = "en_US.UTF-8";
 
-    buildInputs = [ git_archive_pkgs rpkgs  system_packages rstudio_pkgs python_pkgs];
+    buildInputs = [ git_archive_pkgs rpkgs  system_packages rstudio_pkgs python_pkgs inla];
       
   shellHook = ''
     export RETICULATE_PYTHON=$(which python3)
     #export LD_LIBRARY_PATH=${pkgs.glibc}/lib:$LD_LIBRARY_PATH
+    echo 'options(repos = c(CRAN = "https://cran.r-project.org"))' >> ~/.Rprofile
+
     Rscript -e 'if (!requireNamespace("INLA", quietly = TRUE)) { if (!requireNamespace("remotes", quietly = TRUE)) { install.packages("remotes") }; remotes::install_version("INLA", version = "23.05.30", repos = c(getOption("repos"), INLA = "https://inla.r-inla-download.org/R/testing")) } else { cat("INLA is already installed.\n") }'
 
   '';
