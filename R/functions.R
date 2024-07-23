@@ -1,4 +1,4 @@
-# Define the function to get data from a FITS file
+# Get data from a FITS file
 get_data <- function(file_path) {
   # Read the FITS file
   fits_data <- readFITS(file_path)
@@ -9,6 +9,26 @@ get_data <- function(file_path) {
   return(image_data)
 }
 
+#' Prepare Data for INLA Analysis
+#'
+#' This function prepares image data for INLA analysis by extracting dimensions, 
+#' creating coordinate matrices, identifying valid data points, and normalizing the image data.
+#'
+#' @param img A numeric matrix representing the image data to be analyzed.
+#'
+#' @return A list containing the following elements:
+#' \item{x}{A matrix of x-coordinates corresponding to the image data.}
+#' \item{y}{A matrix of y-coordinates corresponding to the image data.}
+#' \item{valid}{A vector of indices indicating valid (non-NA) data points in the image.}
+#' \item{xsize}{The number of columns in the image data.}
+#' \item{ysize}{The number of rows in the image data.}
+#' \item{xfin}{The final x-dimension size, same as xsize.}
+#' \item{yfin}{The final y-dimension size, same as ysize.}
+#' \item{logimg}{A matrix of the log10-transformed image data.}
+#'
+#' @examples
+#' img <- matrix(runif(100), nrow = 10, ncol = 10)
+#' prepared_data <- prepare_data(img)
 prepare_data <- function(img) {
     # Get dimensions of the img array
     dims <- dim(img)
@@ -33,10 +53,38 @@ prepare_data <- function(img) {
 }
 
 
+#' Perform INLA Analysis on Prepared Data
+#'
+#' This function performs INLA) analysis on prepared image data.
+#' It supports both stationary and non-stationary models and can handle different shapes for the analysis.
+#'
+#' @param prepared_data A list containing prepared image data, including coordinates, valid data points, and log-transformed image data.
+#' @param weight A numeric value representing the weight for the analysis. Default is 1.
+#' @param zoom A numeric value representing the zoom factor for the analysis. Default is 1.
+#' @param xini A numeric value representing the initial x-coordinate for the analysis. Default is 0.
+#' @param yini A numeric value representing the initial y-coordinate for the analysis. Default is 0.
+#' @param nonstationary A logical value indicating whether to use a non-stationary model. Default is FALSE.
+#' @param restart An integer value representing the number of restarts for the INLA algorithm. Default is 0L.
+#' @param shape A character string representing the shape for the analysis. Options are 'ellipse', 'radius', or 'none'. Default is 'ellipse'.
+#' @param tolerance A numeric value representing the tolerance for the INLA algorithm. Default is 1e-4.
+#' @param p_range A numeric vector representing the prior range for the Gaussian process. Default is c(2, 0.2).
+#' @param p_sigma A numeric vector representing the prior sigma for the Gaussian process. Default is c(2, 0.2).
+#' @param cutoff A numeric value representing the cutoff for the mesh tessellation. Default is 5.
+#'
+#' @return A list containing the following elements:
+#' \item{out}{A matrix of the INLA analysis results.}
+#' \item{image}{A matrix of the original image data.}
+#' \item{erimage}{A matrix of the error image data, if available.}
+#' \item{outsd}{A matrix of the standard deviation of the INLA analysis results.}
+#' \item{x}{A vector of x-coordinates for the analysis results.}
+#' \item{y}{A vector of y-coordinates for the analysis results.}
+#' \item{z}{A vector of the INLA analysis results.}
+#' \item{erz}{A vector of the standard deviation of the INLA analysis results.}
+#'
 stationary_inla <- function(prepared_data, weight=1, zoom = 1,
-                            xini=0,yini=0,xfin=77,yfin=77,
+                            xini=0,yini=0,
                             nonstationary=FALSE,restart=0L,
-                            xsize=77,ysize=77,shape='ellipse',tolerance=1e-4,
+                            shape='ellipse',tolerance=1e-4,
                             p_range=c(2,0.2),p_sigma=c(2,0.2),cutoff=5){
 
     # Extract variables
@@ -230,6 +278,7 @@ stationary_inla <- function(prepared_data, weight=1, zoom = 1,
         
     return(list(out=output, image=timage, erimage=terrimage,outsd=outputsd, x=xx,y=yy,z=zz,erz=erzz))
 }
+
 plot_and_save_images <- function(pr_data, imginla, outfile, eroutfile) {
   x <- pr_data$x
   y <- pr_data$y
