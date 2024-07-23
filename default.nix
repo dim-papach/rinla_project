@@ -65,7 +65,7 @@ let
  
 # System packages to be included (Downloaded from the nixpkgs repo)
   system_packages = builtins.attrValues {
-  inherit (pkgs) R glibcLocales nix gnugrep glibc python3 toybox;
+  inherit (pkgs) R glibcLocales nix gnugrep glibc python3 toybox cowsay;
 };
 
 # RStudio packages to be included
@@ -75,9 +75,9 @@ let
 
   # Definition for INLA package
     inla = [(pkgs.rPackages.buildRPackage {
-            name = "INLA";
-            version = "23.05.30-1";
-            src = pkgs.fetchzip{
+        name = "INLA";
+        version = "23.05.30-1";
+        src = pkgs.fetchzip{
 	        url = "https://inla.r-inla-download.org/R/testing/src/contrib/INLA_23.05.30-1.tar.gz";
 	        sha256 = "sha256-LvZRUidUuWzBcgarqnC8i+fWnyJbTtjWGj7yOdFVNDg=";
 	        };
@@ -112,10 +112,8 @@ let
   shellHook = ''
     export RETICULATE_PYTHON=$(which python3)
     #export LD_LIBRARY_PATH=${pkgs.glibc}/lib:$LD_LIBRARY_PATH
-    echo 'options(repos = c(CRAN = "https://cran.r-project.org"))' >> ~/.Rprofile
-
-    Rscript -e 'if (!requireNamespace("INLA", quietly = TRUE)) { if (!requireNamespace("remotes", quietly = TRUE)) { install.packages("remotes") }; remotes::install_version("INLA", version = "23.05.30", repos = c(getOption("repos"), INLA = "https://inla.r-inla-download.org/R/testing")) } else { cat("INLA is already installed.\n") }'
-
+    Rscript -e 'if (requireNamespace("INLA", quietly = TRUE))  { system("cowsay -f llama INLA is already installed.\n") } else {system("cowsay -e xx -f ghostbusters INLA is NOT installed RIP")}' 
+    chmod +x ./run.R
   '';
 
     QT_XCB_GL_INTEGRATION="none";
