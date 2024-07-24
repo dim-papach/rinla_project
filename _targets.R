@@ -52,8 +52,8 @@ list(
   tar_target(file,"data.fits", format = "file"),
   tar_target(data, get_data(file)),
   tar_target(prepared, prepare_data(data)),
-  tar_target(model, stationary_inla(prepared, shape = "none")),
+  tar_target(model, stationary_inla(prepared, shape = "radius")),
   tar_target(save_inla_results, save_fits(imginla = model)),
-  #tar_target(plot, plot_and_save_images(prepared, model))
+  tar_target(plot_gonzalez, plot_and_save_images(prepared, model)),
   tar_target(plot, plot_inla(model),  cue = tar_cue(mode = "always"))
   )
