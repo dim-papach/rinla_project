@@ -23,6 +23,7 @@ let
     ggplot2 
     gtools 
     here 
+    httpgd
     IDPmisc 
     imager 
     inlabru 

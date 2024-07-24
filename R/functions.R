@@ -246,12 +246,11 @@ stationary_inla <- function(prepared_data, weight=1, zoom = 1,
         outputsd <- inla.mesh.project(inla.mesh.projector(mesh,xlim=c(xini,xfin),ylim=c(yini,yfin),dim=c(xsize+1,ysize+1)),res$summary.random$i$sd)
     }    
         
-   # zoom    
-   # if (zoom != 1){
-   #     output <- zoom_fix(output,zoom)
-   #     outputsd <- zoom_fix(outputsd,zoom)
-   # }
-        
+    zoom    
+    if (zoom != 1){
+        output <- zoom_fix(output,zoom)
+        outputsd <- zoom_fix(outputsd,zoom)
+    }
     #original data to compare
     xbin <- (xfin-xini)/(xsize+1)
     ybin <- (yfin-yini)/(ysize+1) 
@@ -279,7 +278,25 @@ stationary_inla <- function(prepared_data, weight=1, zoom = 1,
     return(list(out=output, image=timage, erimage=terrimage,outsd=outputsd, x=xx,y=yy,z=zz,erz=erzz))
 }
 
-plot_and_save_images <- function(pr_data, imginla, outfile, eroutfile) {
+save_fits <- function(imginla, output_dir = "INLA_fits_output"){
+  if(!dir.exists(output_dir)){
+    dir.create(output_dir)
+  }
+
+  # Define file names
+  original_image_file <- file.path(output_dir,  "Original")
+  reconstructed_image_file <- file.path(output_dir, "Reconstructed")
+  error_image_file <- file.path(output_dir,"Error")
+  sd_image_file <- file.path(output_dir,"sd")
+
+ # Save
+
+  writeFITSim(imginla$image, file = paste(original_image_file, 'fits', sep = '.'))
+  writeFITSim(imginla$out, file = paste(reconstructed_image_file, 'fits', sep = '.'))
+  writeFITSim(imginla$outsd, file = paste(sd_image_file, 'fits', sep = '.'))
+}
+
+plot_and_save_images <- function(pr_data, imginla, outfile = "out", eroutfile = "error") {
   x <- pr_data$x
   y <- pr_data$y
   logimg <- pr_data$logimg
