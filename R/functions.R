@@ -3,6 +3,11 @@ get_data <- function(file_path) {
   # Read the FITS file
   fits_data <- readFITS(file_path)
   
+  # Check if the FITS file contains image data
+  if (is.null(fits_data$imDat)) {
+    stop("Error: No image data found in the FITS file.")
+  }
+  
   # Extract the image data from the FITS file
   image_data <- fits_data$imDat
   
@@ -30,32 +35,46 @@ get_data <- function(file_path) {
 #' img <- matrix(runif(100), nrow = 10, ncol = 10)
 #' prepared_data <- prepare_data(img)
 prepare_data <- function(img) {
-    # Get dimensions of the img array
-    dims <- dim(img)
-
-    # Create x and y arrays using matrix indexing
-    x <- matrix(rep(1:dims[1], dims[2]), nrow = dims[1], ncol = dims[2])
-    y <- matrix(rep(1:dims[2], each = dims[1]), nrow = dims[1], ncol = dims[2])
-
-    # Identify valid data points
-    valid <- which(!(is.na(img)))
-
-    # Set dimensions
-    xsize <- dims[2]
-    ysize <- dims[1]
-    xfin <- xsize
-    yfin <- ysize
-
-    ##normalize data
-    logimg = log10(img)
-
-    return(list(x = x, y = y, valid = valid, xsize = xsize, ysize = ysize, xfin = xfin, yfin = yfin, logimg = logimg))
+  # Check if the input is a valid matrix
+  if (is.null(dim(img)) || length(dim(img)) != 2) {
+    stop("Error: The image data is not a 2D matrix.")
+  }
+  
+  # Get dimensions of the img array
+  dims <- dim(img)
+  cat("Image dimensions: ", dims, "\n") # Debugging output
+  
+  # Create x and y arrays using matrix indexing
+  x <- matrix(rep(1:dims[1], dims[2]), nrow = dims[1], ncol = dims[2])
+  y <- matrix(rep(1:dims[2], each = dims[1]), nrow = dims[1], ncol = dims[2])
+  
+  # Identify valid data points
+  valid <- which(!is.na(img) & !is.nan(img) & img != 0)
+  
+  # Check if there are any valid points
+  if (length(valid) == 0) {
+    stop("Error: No valid data points found in the image.")
+  }
+  
+  # Set dimensions
+  xsize <- dims[2]
+  ysize <- dims[1]
+  xfin <- xsize
+  yfin <- ysize
+  
+  # Normalize data
+  logimg <- log10(img)
+  logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with NA
+  
+  return(list(
+    x = x, y = y, valid = valid, xsize = xsize, ysize = ysize,
+    xfin = xfin, yfin = yfin, logimg = logimg, img = img
+  ))
 }
-
 
 #' Perform INLA Analysis on Prepared Data
 #'
-#' This function performs INLA) analysis on prepared image data.
+#' This function performs INLA analysis on prepared image data.
 #' It supports both stationary and non-stationary models and can handle different shapes for the analysis.
 #'
 #' @param prepared_data A list containing prepared image data, including coordinates, valid data points, and log-transformed image data.
@@ -96,15 +115,42 @@ stationary_inla <- function(prepared_data, weight=1, zoom = 1,
     xfin <- prepared_data$xfin
     yfin <- prepared_data$yfin
     logimg <- prepared_data$logimg
-
+    img <- prepared_data$img
+    
+    # Check dimensions and valid indices
+    if (length(valid) == 0) {
+      stop("Error: No valid data points found for INLA analysis.")
+    }
+    if (length(tx) != length(ty)) {
+      stop("Error: Mismatch in x and y coordinate lengths.")
+    }
+    
+    cat("Number of valid data points: ", length(valid), "\n") # Debugging output
     x <- tx[valid]
     y <- ty[valid]
 
     par <- logimg[valid]
+    if (any(!is.finite(par))) {
+      stop("Error: Non-finite values detected in the parameters for INLA.")
+    }
+    
+    cat("Summary of 'par' values: ", summary(par), "\n") # Debugging output
+    cat("First few 'par' values: ", head(par), "\n") # More detailed inspection
+    
     if (hasArg(tepar)) { epar <- tepar^2 } else { epar <- NULL}
 
     # Create a mesh (tesselation) 
-    mesh <- inla.mesh.2d(cbind(x,y), max.n = 10, cutoff = cutoff)
+    mesh <- tryCatch(
+      inla.mesh.2d(cbind(x, y), max.n = -1, cutoff = max(cutoff,1e-5)),
+      error = function(e) stop("Error creating INLA mesh: ", e$message)
+    )
+    # Check that the mesh was created successfully and has vertices
+    if (is.null(mesh) || length(mesh$loc) == 0) {
+      stop("Error: Mesh creation failed or resulted in an empty mesh.")
+    }
+    
+    cat("Number of mesh vertices: ", nrow(mesh$loc), "\n") # Debugging output
+    
 
     #bookkeeeping
     A <- inla.spde.make.A(mesh, loc=cbind(x,y))
@@ -196,6 +242,7 @@ stationary_inla <- function(prepared_data, weight=1, zoom = 1,
                     data=inla.stack.data(stk_ell),
                     control.predictor=list(A=inla.stack.A(stk_ell)),scale=epar,
                     control.compute = list(openmp.strategy='huge'),
+                    verbose = inla.getOption("verbose"), 
             control.inla = list(tolerance=tolerance,restart=restart))
 
         #print restuls
@@ -296,7 +343,7 @@ save_fits <- function(imginla, output_dir = "INLA_fits_output"){
   writeFITSim(imginla$outsd, file = paste(sd_image_file, 'fits', sep = '.'))
 }
 
-plot_and_save_images <- function(pr_data, imginla, outfile = "out", eroutfile = "error") {
+plot_and_save_images <- function(pr_data, imginla, outfile = "out_g", eroutfile = "error_g") {
   x <- pr_data$x
   y <- pr_data$y
   logimg <- pr_data$logimg
@@ -318,7 +365,7 @@ plot_and_save_images <- function(pr_data, imginla, outfile = "out", eroutfile = 
   ## PLOT
   fj5_img <- classIntervals(c(logimg[valid], imginla_out[valid]), 
                             n = cutColor, style = "fisher")
-  
+ 
   inimg <- levelplot(imginla$image, xlim = c(0, ysize), ylim = c(0, xsize),
                      col.regions = colpal,
                      main = list(name, side = 1, line = 0.5, cex = 1.4), 
