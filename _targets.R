@@ -6,10 +6,15 @@
 # Load packages required to define the pipeline:
 library(targets)
 # library(tarchetypes) # Load other packages as needed.
-
+library(future)
+library(future.callr)
+# plan(callr)
 # Set target options:
 tar_option_set(
-  packages = c("INLA", "IDPmisc", "rasterVis", "viridis", "latex2exp", "fields", "lattice", "latticeExtra", "classInt", "reshape2", "FITSio", "MASS", "targets")# packages that your targets need to run
+  packages = c("INLA", "IDPmisc", "rasterVis", "viridis", "latex2exp", "fields",
+               "lattice", "latticeExtra", "classInt", "reshape2", "FITSio", 
+               "MASS", "targets"),
+  # packages that your targets need to run
   # format = "qs", # Optionally set the default storage format. qs is fast.
   #
   # For distributed computing in tar_make(), supply a {crew} controller
@@ -17,7 +22,7 @@ tar_option_set(
   # Choose a controller that suits your needs. For example, the following
   # sets a controller with 2 workers which will run as local R processes:
   #
-  #   controller = crew::crew_controller_local(workers = 2)
+  #  controller = crew::crew_controller_local(workers = 6)
   #
   # Alternatively, if you want workers to run on a high-performance computing
   # cluster, select a controller from the {crew.cluster} package. The following
@@ -41,7 +46,7 @@ options(clustermq.scheduler = "multicore")
 
 # tar_make_future() is an older (pre-{crew}) way to do distributed computing
 # in {targets}, and its configuration for your machine is below.
-future::plan(future.callr::callr)
+#future::plan(future.callr::callr)
 
 # Run the R scripts in the R/ folder with your custom functions:
 tar_source()
@@ -49,11 +54,11 @@ tar_source()
 
 # Replace the target list below with your own:
 list(
-  tar_target(file,"data.fits", format = "file"),
+  tar_target(file,"NII 6584_line_map_masked_cropped.fits", format = "file"),
   tar_target(data, get_data(file)),
   tar_target(prepared, prepare_data(data)),
-  tar_target(model, stationary_inla(prepared, shape = "radius")),
+  tar_target(model, stationary_inla(prepared, shape = "none")),
   tar_target(save_inla_results, save_fits(imginla = model)),
-  tar_target(plot_gonzalez, plot_and_save_images(prepared, model)),
+  #tar_target(plot_gonzalez, plot_and_save_images(prepared, model)),
   tar_target(plot, plot_inla(model),  cue = tar_cue(mode = "always"))
   )
