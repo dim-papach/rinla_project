@@ -6,15 +6,10 @@
 # Load packages required to define the pipeline:
 library(targets)
 # library(tarchetypes) # Load other packages as needed.
-library(future)
-library(future.callr)
-# plan(callr)
+
 # Set target options:
 tar_option_set(
-  packages = c("INLA", "IDPmisc", "rasterVis", "viridis", "latex2exp", "fields",
-               "lattice", "latticeExtra", "classInt", "reshape2", "FITSio", 
-               "MASS", "targets"),
-  # packages that your targets need to run
+  packages = c("INLA", "FITSio", "reshape2", "ggplot2", "viridis")  # packages that your targets need to run
   # format = "qs", # Optionally set the default storage format. qs is fast.
   #
   # For distributed computing in tar_make(), supply a {crew} controller
@@ -22,7 +17,7 @@ tar_option_set(
   # Choose a controller that suits your needs. For example, the following
   # sets a controller with 2 workers which will run as local R processes:
   #
-  #  controller = crew::crew_controller_local(workers = 6)
+  #   controller = crew::crew_controller_local(workers = 2)
   #
   # Alternatively, if you want workers to run on a high-performance computing
   # cluster, select a controller from the {crew.cluster} package. The following
@@ -46,7 +41,7 @@ options(clustermq.scheduler = "multicore")
 
 # tar_make_future() is an older (pre-{crew}) way to do distributed computing
 # in {targets}, and its configuration for your machine is below.
-#future::plan(future.callr::callr)
+future::plan(future.callr::callr)
 
 # Run the R scripts in the R/ folder with your custom functions:
 tar_source()
@@ -54,11 +49,148 @@ tar_source()
 
 # Replace the target list below with your own:
 list(
-  tar_target(file,"NII 6584_line_map_masked_cropped.fits", format = "file"),
-  tar_target(data, get_data(file)),
-  tar_target(prepared, prepare_data(data)),
-  tar_target(model, stationary_inla(prepared, shape = "none")),
-  tar_target(save_inla_results, save_fits(imginla = model)),
-  #tar_target(plot_gonzalez, plot_and_save_images(prepared, model)),
-  tar_target(plot, plot_inla(model),  cue = tar_cue(mode = "always"))
+  # 1. Get Data
+  tar_target(
+    fits_file_path,
+    "N2_6583s_masked.fits", # Replace with the actual path to your FITS file
+    format = "file"
+  ),
+  
+  tar_target(
+    raw_data,
+    get_data(fits_file_path)
+  ),
+  
+  # 2. Prepare Data
+  tar_target(
+    prepared_data,
+    prepare_data(raw_data)
+  ),
+  
+  # 3. INLA Model Workflow
+  tar_target(
+    inla_variables,
+    extract_variables(prepared_data)
+  ),
+  
+  tar_target(
+    data_validity_check,
+    check_data_validity(inla_variables$valid, inla_variables$tx, inla_variables$ty),
+    cue = tar_cue(mode = "always") # Ensure it stops if data is invalid
+  ),
+  
+  tar_target(
+    model_params,
+    compute_parameters(
+      valid = inla_variables$valid,
+      tx = inla_variables$tx,
+      ty = inla_variables$ty,
+      logimg = inla_variables$logimg,
+      weight = 1 # Adjust weight as needed
+    )
+  ),
+  
+  tar_target(
+    inla_mesh,
+    create_inla_mesh(model_params$x, model_params$y, cutoff = 5) # Adjust cutoff as needed
+  ),
+  
+  tar_target(
+    spde_model,
+    define_spde_model(
+      inla_mesh,
+      nonstationary = FALSE,  # Adjust based on your use case
+      p_range = c(2, 0.2),
+      p_sigma = c(2, 0.2)
+    )
+  ),
+  
+  tar_target(
+    projection_matrix_A,
+    inla.spde.make.A(inla_mesh, loc = cbind(model_params$x, model_params$y))
+  ),
+  
+  tar_target(
+    model_stack,
+    prepare_model_stack(
+      shape = 'ellipse',  # Adjust shape based on your needs: 'radius', 'ellipse', 'none'
+      x = model_params$x,
+      y = model_params$y,
+      par = model_params$par,
+      A = projection_matrix_A,
+      spde = spde_model,
+      weight = 1, # Adjust weight as needed
+      xcenter = model_params$xcenter,
+      ycenter = model_params$ycenter
+    )
+  ),
+  
+  tar_target(
+    inla_result,
+    run_inla_model(
+      stk = model_stack$stk,
+      par = model_params$par,
+      epar = model_params$epar,
+      spde = spde_model,
+      tolerance = 1e-4, # Adjust as necessary
+      restart = 0L, # Adjust based on your restart strategy
+      shape = 'ellipse' # Adjust shape as needed
+    )
+  ),
+  
+  tar_target(
+    projected_results,
+    project_inla_results(
+      mesh = inla_mesh,
+      res = inla_result,
+      xini = 0, xfin = inla_variables$xfin,
+      yini = 0, yfin = inla_variables$yfin,
+      xsize = inla_variables$xsize,
+      ysize = inla_variables$ysize,
+      zoom = 1, # Adjust zoom as needed
+      shape = 'ellipse', # Adjust shape as needed
+      xcenter = model_params$xcenter,
+      ycenter = model_params$ycenter,
+      eigens = model_stack$eigens,
+      spde = spde_model
+    )
+  ),
+  
+  tar_target(
+    inla_results_collected,
+    collect_inla_results(
+      output = projected_results$output,
+      outputsd = projected_results$outputsd,
+      x = model_params$x,
+      y = model_params$y,
+      par = model_params$par,
+      epar = model_params$epar,
+      xsize = inla_variables$xsize,
+      ysize = inla_variables$ysize,
+      xini = 0,
+      xfin = inla_variables$xfin,
+      yini = 0,
+      yfin = inla_variables$yfin,
+      zoom = 1 # Adjust zoom as needed
+    )
+  ),
+  
+  # 4. Save INLA Results as FITS Files
+  tar_target(
+    save_fits_files,
+    save_fits(inla_results_collected, output_dir = "INLA_fits_output"),
+    format = "file"
+  ),
+  
+  # 5. Plot and Save INLA Analysis Results
+  # tar_target(
+  #   plot_inla_images,
+  #   plot_and_save_images(prepared_data, inla_results_collected, outfile = "out_g", eroutfile = "error_g")
+  # ),
+  
+  tar_target(
+    plot_inla_results,
+    plot_inla(inla_results_collected, title_prefix = "INLA_Result", output_dir = "plots"),
+    cue = tar_cue(mode = "always")
   )
+)
