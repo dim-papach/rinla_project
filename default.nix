@@ -34,6 +34,7 @@ let
     latticeExtra 
     latex2exp 
     MASS
+    parallelly
     rgl 
     rlang 
     rmarkdown 
@@ -66,9 +67,12 @@ let
  
 # System packages to be included (Downloaded from the nixpkgs repo)
   system_packages = builtins.attrValues {
-  inherit (pkgs) R glibcLocales nix gnugrep glibc python3 toybox cowsay;
+  inherit (pkgs) R glibcLocales nix gnugrep glibc python311 toybox cowsay;
 };
-
+# Rebuild R to ensure it uses the specified GLIBC version
+R = pkgs.R.overrideAttrs (oldAttrs: {
+  buildInputs = oldAttrs.buildInputs ++ [ pkgs.glibc ];
+});
 # RStudio packages to be included
  rstudio_pkgs = pkgs.rstudioWrapper.override {
   packages = [ git_archive_pkgs rpkgs ];
@@ -112,7 +116,19 @@ let
       
   shellHook = ''
     export RETICULATE_PYTHON=$(which python3)
-    #export LD_LIBRARY_PATH=${pkgs.glibc}/lib:$LD_LIBRARY_PATH
+    echo "Setting up Nix shell environment..."
+    echo "LOCALE_ARCHIVE is set to: $LOCALE_ARCHIVE"
+    echo "LANG is set to: $LANG"
+    echo "LD_LIBRARY_PATH is: $LD_LIBRARY_PATH"
+    # The rest of your existing shellHook
+
+    # Safely set LD_LIBRARY_PATH to include the R library path
+    if [ -z "$LD_LIBRARY_PATH" ]; then
+      export LD_LIBRARY_PATH=/nix/store/130rh1iwc2k0qqksgf09663sdbds5vml-R-4.3.2/lib/R/lib
+    else
+      export LD_LIBRARY_PATH=/nix/store/130rh1iwc2k0qqksgf09663sdbds5vml-R-4.3.2/lib/R/lib:$LD_LIBRARY_PATH
+    fi
+
     Rscript -e 'if (requireNamespace("INLA", quietly = TRUE))  { system("cowsay -f llama INLA is already installed.\n") } else {system("cowsay -e xx -f ghostbusters INLA is NOT installed RIP")}' 
     chmod +x ./run.R
   '';
