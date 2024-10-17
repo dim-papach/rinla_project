@@ -61,9 +61,13 @@ prepare_data <- function(img) {
   # Create x and y arrays using matrix indexing
   x <- matrix(rep(1:dims[1], dims[2]), nrow = dims[1], ncol = dims[2])
   y <- matrix(rep(1:dims[2], each = dims[1]), nrow = dims[1], ncol = dims[2])
+  # Normalize data
+  logimg <- log10(img)
+  logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with 0
   
   # Identify valid data points
-  valid <- which(!is.na(img) & !is.nan(img) & img != 0)
+  valid <- which(!is.na(img) & !is.nan(img) & img != 0 
+                 & !is.infinite(logimg) & !is.na(logimg) & !is.nan(logimg))
   
   # Check if there are any valid points
   if (length(valid) == 0) {
@@ -76,9 +80,6 @@ prepare_data <- function(img) {
   xfin <- xsize
   yfin <- ysize
   
-  # Normalize data
-  logimg <- log10(img)
-  logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with 0
   
   return(list(
     x = x, y = y, valid = valid, xsize = xsize, ysize = ysize,
@@ -86,35 +87,7 @@ prepare_data <- function(img) {
   ))
 }
 
-# ---------------------------------------------------------------------------
-# New Functions for Stationary INLA
-# ---------------------------------------------------------------------------
-
-#' Extract Variables from Prepared Data
-#'
-#' This function extracts necessary variables from the prepared data for INLA analysis.
-#'
-#' @param prepared_data A list containing prepared image data.
-#'
-#' @return A list of variables extracted from the prepared data.
-#'
-#' @examples
-#' variables <- extract_variables(prepared_data)
-extract_variables <- function(prepared_data) {
-  # Extract variables from prepared_data
-  valid <- prepared_data$valid
-  tx <- prepared_data$x
-  ty <- prepared_data$y
-  xsize <- prepared_data$xsize
-  ysize <- prepared_data$ysize
-  xfin <- prepared_data$xfin
-  yfin <- prepared_data$yfin
-  logimg <- prepared_data$logimg
-  img <- prepared_data$img
-  
-  return(list(valid=valid, tx=tx, ty=ty, xsize=xsize, ysize=ysize,
-              xfin=xfin, yfin=yfin, logimg=logimg, img=img))
-}
+# Breakdown of Stationary INLA
 
 #' Check Data Validity for INLA Analysis
 #'
@@ -127,18 +100,35 @@ extract_variables <- function(prepared_data) {
 #' @return NULL if checks pass; stops execution if checks fail.
 #'
 #' @examples
-#' check_data_validity(valid, tx, ty)
-check_data_validity <- function(valid, tx, ty) {
-  # Perform checks on the data
+#' check_data_validity(valid, tx, ty, logimg)
+check_data_validity <- function(valid, tx, ty, logimg, img) {
+  # Print dimensions for debugging
+  cat("Number of valid data points: ", length(valid), "\n")
+  cat("Length of valid:", length(valid), "\n")
+  cat("Dimensions of tx:", length(tx), "\n")
+  cat("Dimensions of valid tx:", length(tx[valid]), "\n")
+  cat("Dimensions of valid ty:", length(ty[valid]), "\n")
+  cat("Dimensions of logimg:", length(logimg), "\n")
+  
   if (length(valid) == 0) {
     stop("Error: No valid data points found for INLA analysis.")
   }
-  if (length(tx) != length(ty)) {
-    stop("Error: Mismatch in x and y coordinate lengths.")
+  if (length(valid) > length(tx)) {
+    stop("Error: The valid indices are longer than tx dimensions.")
   }
-  
-  cat("Number of valid data points: ", length(valid), "\n") # Debugging output
+  if (length(valid) > length(ty)) {
+    stop("Error: The valid indices are longer than ty dimensions.")
+  }
+  if (length(valid) > length(logimg)) {
+    stop("Error: The valid indices are longer than logimg dimensions.")
+  }
+  if (length(valid) != sum(!is.na(img) & img != 0)) {
+    cat("Number of valid data points: ", length(valid), "\n")
+    cat("Number of non-NA/non-zero values in img: ", sum(!is.na(img) & img != 0), "\n")
+    stop("Error: The number of valid indices are  not the same as the Number of non-NA/non-zero values in img.")
+  }
 }
+
 
 #' Compute Parameters for INLA Model
 #'
@@ -465,6 +455,17 @@ collect_inla_results <- function(output, outputsd, x, y, par, epar, xsize, ysize
   ybin <- (yfin - yini) / (ysize + 1)
   xmat <- floor((x - xini) / xbin) + 1  # Map of coordinates into indices
   ymat <- floor((y - yini) / ybin) + 1  # Map of coordinates into indices
+  
+  cat("Length of xmat:", length(xmat), "\n")
+  cat("Length of ymat:", length(ymat), "\n")
+  cat("Length of par:", length(par), "\n")
+  cat("Dimensions of the result matrix:", dim(output), "\n")
+  
+  # Check if any indices are out of bounds
+  if (any(xmat > nrow(output)) || any(ymat > ncol(output))) {
+    stop("Error: Index out of bounds in xmat or ymat.")
+  }
+  
   timage <- matrix(NA, nrow = xsize + 1, ncol = ysize + 1)
   for (i in 1:length(x)) {
     timage[xmat[i], ymat[i]] <- par[i]

@@ -52,7 +52,7 @@ list(
   # 1. Get Data
   tar_target(
     fits_file_path,
-    "N2_6583s_masked.fits", # Replace with the actual path to your FITS file
+    "Ha_line_map_masked_cropped.fits", # Replace with the actual path to your FITS file
     format = "file"
   ),
   
@@ -63,19 +63,16 @@ list(
   
   # 2. Prepare Data
   tar_target(
-    prepared_data,
-    prepare_data(raw_data)
-  ),
-  
-  # 3. INLA Model Workflow
-  tar_target(
+    #prepared_data,
     inla_variables,
-    extract_variables(prepared_data)
+    prepare_data(raw_data)
   ),
   
   tar_target(
     data_validity_check,
-    check_data_validity(inla_variables$valid, inla_variables$tx, inla_variables$ty),
+    check_data_validity(valid = inla_variables$valid,tx = inla_variables$x,
+                        ty = inla_variables$y,logimg = inla_variables$logimg,
+                        img = inla_variables$img),
     cue = tar_cue(mode = "always") # Ensure it stops if data is invalid
   ),
   
@@ -83,8 +80,8 @@ list(
     model_params,
     compute_parameters(
       valid = inla_variables$valid,
-      tx = inla_variables$tx,
-      ty = inla_variables$ty,
+      tx = inla_variables$x,
+      ty = inla_variables$y,
       logimg = inla_variables$logimg,
       weight = 1 # Adjust weight as needed
     )
