@@ -450,47 +450,76 @@ adjust_zoom <- function(output, outputsd, zoom) {
 #' @examples
 #' final_results <- collect_inla_results(output, outputsd, x, y, par, epar, xsize, ysize, xini, xfin, yini, yfin, zoom)
 collect_inla_results <- function(output, outputsd, x, y, par, epar, xsize, ysize, xini, xfin, yini, yfin, zoom) {
-  # Original data to compare
+  # Step 1: Calculate bin sizes for mapping coordinates into matrix indices
   xbin <- (xfin - xini) / (xsize + 1)
   ybin <- (yfin - yini) / (ysize + 1)
-  xmat <- floor((x - xini) / xbin) + 1  # Map of coordinates into indices
-  ymat <- floor((y - yini) / ybin) + 1  # Map of coordinates into indices
   
+  # Step 2: Map coordinates into indices
+  xmat <- floor((x - xini) / xbin) + 1
+  ymat <- floor((y - yini) / ybin) + 1
+  
+  # Step 3: Rescale xmat and ymat if necessary to fit matrix dimensions
+  nrows <- nrow(output)
+  ncols <- ncol(output)
+  if (all(xmat >= 1 & xmat <= nrows & ymat >= 1 & ymat <= ncols)) {
+    # No scaling needed
+    xmat_scaled <- xmat
+    ymat_scaled <- ymat
+    cat("No scaling was necessary.\n")
+  } else {
+    # Apply scaling to fit within matrix bounds
+    xmat_scaled <- round((xmat - min(xmat)) / (max(xmat) - min(xmat)) * (nrows - 1)) + 1
+    ymat_scaled <- round((ymat - min(ymat)) / (max(ymat) - min(ymat)) * (ncols - 1)) + 1
+    cat("Scaling was applied to xmat and ymat.\n")
+  }
+  
+  # Step 4: Debugging check for out-of-bound indices
   cat("Length of xmat:", length(xmat), "\n")
-  cat("Length of ymat:", length(ymat), "\n")
+  cat("Length of xmat_scaled:", length(xmat_scaled), "\n")
+  cat("Length of ymat_scaled:", length(ymat_scaled), "\n")
   cat("Length of par:", length(par), "\n")
   cat("Dimensions of the result matrix:", dim(output), "\n")
+  # Check if scaling was necessary
+  if (all(xmat == xmat_scaled) & all(ymat == ymat_scaled)) {
+    cat("No scaling was necessary, xmat and ymat are already correctly mapped.\n")
+  } else {
+    cat("Scaling was applied to xmat and ymat.\n")
+  } 
   
-  # Check if any indices are out of bounds
-  if (any(xmat > nrow(output)) || any(ymat > ncol(output))) {
-    stop("Error: Index out of bounds in xmat or ymat.")
+  if (any(xmat_scaled > nrows | xmat_scaled < 1 | ymat_scaled > ncols | ymat_scaled < 1)) {
+    stop("Error: Scaled indices are out of bounds.")
   }
   
+  # Step 5: Initialize the image matrices
   timage <- matrix(NA, nrow = xsize + 1, ncol = ysize + 1)
   for (i in 1:length(x)) {
-    timage[xmat[i], ymat[i]] <- par[i]
+    timage[xmat_scaled[i], ymat_scaled[i]] <- par[i]
   }
+  
   terrimage <- NULL
   if (!is.null(epar)) {
     terrimage <- matrix(NA, nrow = xsize + 1, ncol = ysize + 1)
     for (i in 1:length(x)) {
-      terrimage[xmat[i], ymat[i]] <- epar[i]
+      terrimage[xmat_scaled[i], ymat_scaled[i]] <- epar[i]
     }
   }
   
-  # More info
+  # Step 6: Reshape the output and output standard deviation for further processing
   mim <- reshape2::melt(output)
   colnames(mim) <- c("x", "y", "value")
   xx <- mim$x / zoom - 1
   yy <- mim$y / zoom - 1
   zz <- mim$value   
+  
   sdmim <- reshape2::melt(outputsd)
   colnames(sdmim) <- c("x", "y", "value")
   erzz <- sdmim$value
   
+  # Step 7: Return the collected results
   return(list(out = output, image = timage, erimage = terrimage,
               outsd = outputsd, x = xx, y = yy, z = zz, erz = erzz))
 }
+
 
 # ---------------------------------------------------------------------------
 # Step 3: Save INLA Results as FITS Files

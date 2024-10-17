@@ -110,7 +110,7 @@ list(
   tar_target(
     model_stack,
     prepare_model_stack(
-      shape = 'ellipse',  # Adjust shape based on your needs: 'radius', 'ellipse', 'none'
+      shape = 'none',  # Adjust shape based on your needs: 'radius', 'ellipse', 'none'
       x = model_params$x,
       y = model_params$y,
       par = model_params$par,
@@ -131,7 +131,7 @@ list(
       spde = spde_model,
       tolerance = 1e-4, # Adjust as necessary
       restart = 0L, # Adjust based on your restart strategy
-      shape = 'ellipse' # Adjust shape as needed
+      shape = 'none' # Adjust shape as needed
     )
   ),
   
@@ -145,7 +145,7 @@ list(
       xsize = inla_variables$xsize,
       ysize = inla_variables$ysize,
       zoom = 1, # Adjust zoom as needed
-      shape = 'ellipse', # Adjust shape as needed
+      shape = 'none', # Adjust shape as needed
       xcenter = model_params$xcenter,
       ycenter = model_params$ycenter,
       eigens = model_stack$eigens,
