@@ -540,6 +540,37 @@ collect_inla_results <- function(output, outputsd, x, y, par, epar,
               erz = erzz))          # Reshaped standard deviation values
 }
 
+#' Unscale Collected INLA Results Dynamically
+#'
+#' This function iterates over all elements of the collected results from `collect_inla_results`
+#' and optionally applies 10^ to numerical matrices, vectors, or scalars if `scale = TRUE`.
+#'
+#' @param collected A list of collected results from `collect_inla_results`.
+#' @param scale A logical value. If `TRUE`, applies 10^ to all applicable elements.
+#'
+#' @return The modified list of collected results with unscaled values if `scale = TRUE`.
+#'
+#' @examples
+#' collected <- collect_inla_results(...)
+#' unscaled_results <- unscale_collected(collected, scale = TRUE)
+unscale_collected <- function(collected, scaling = FALSE) {
+  if (scaling) {
+    # Iterate through each element in the list
+    collected <- lapply(collected, function(x) {
+      if (is.numeric(x)) {
+        # Apply 10^ only to numeric elements (matrices, vectors, or scalars)
+        10^x
+      } else {
+        # Leave non-numeric elements unchanged
+        x
+      }
+    })
+  }
+  
+  return(collected)
+}
+
+
 # ---------------------------------------------------------------------------
 # Step 3: Save INLA Results as FITS Files
 # ---------------------------------------------------------------------------

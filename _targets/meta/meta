@@ -1,5 +1,5 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|a713f192ce93d8e7|||||||||||||||
+.Random.seed|object|b51df9499f800806|||||||||||||||
 adjust_zoom|function|5c88ae90ffe207a7|||||||||||||||
 check_data_validity|function|1bf28bfdc70dbc89|||||||||||||||
 collect_inla_results|function|960b727fb4993bf8|||||||||||||||
@@ -8,7 +8,7 @@ comparison|stem||7e03d6f4046b0cd8|64ca3d13926ee74b|922833440||t20050.8286454367s
 compute_parameters|function|52c54b1318dfcd2e|||||||||||||||
 create_inla_mesh|function|86f56b227d5b0184|||||||||||||||
 data|stem|21e4c6d9b79c1b88|4525b922227c51ac|6dd9969cc67e4cae|1588979285||t20009.895113655s|52732a2f7ea32b90|82461|rds|local|vector|||0.003||
-data_validity_check|stem|17656ca132f3e9f7|308c39041f30c323|d476dc29a3e8cbb2|-97797077||t20050.8298395946s|a1c456b03adbfbf8|44|rds|local|vector|||0.016||
+data_validity_check|stem|17656ca132f3e9f7|308c39041f30c323|d476dc29a3e8cbb2|-97797077||t20050.837468643s|a1c456b03adbfbf8|44|rds|local|vector|||0.016||
 define_spde_model|function|73663c188cc1633e|||||||||||||||
 extract_variables|function|630ad4fd729f3519|||||||||||||||
 file|stem|eddd8912ee5738af|d824d4d566884bc0|ef46db3751d8e999|-1301001980|NII 6584_line_map_masked_cropped.fits|t19969.6350944428s|eef608cd93f98515|178560|file|local|vector|||5.633||
@@ -27,7 +27,7 @@ plot|stem|17656ca132f3e9f7|64324406c76d2823|de42a9c65eaefb81|1931196220||t20009.
 plot_and_save_images|function|ee73a1d58c642d44|||||||||||||||
 plot_gonzalez|stem|004a426b5f539f11|25f60aa78110a367|5b01f3b24260e721|515298120||t20009.7997915152s|28430dc79d31ca40|875073|rds|local|vector|||1.322||
 plot_inla|function|1519a1d2e8a0257d|||||||||||||||
-plot_inla_results|stem|17656ca132f3e9f7|87a6f600903f60a3|40023d2358171e90|1701513505||t20050.8298788538s|a1c456b03adbfbf8|44|rds|local|vector|||3.368||
+plot_inla_results|stem|17656ca132f3e9f7|1adf9b81915605f7|37a4cb6f0913b3d2|1701513505||t20050.8374880065s|a1c456b03adbfbf8|44|rds|local|vector|||1.606||
 prepare_data|function|3da7afc10a430115|||||||||||||||
 prepare_model_stack|function|7c96e6f1ced6d8e0|||||||||||||||
 prepared|stem|aabe6aa705afef0e|21129e74635bf474|fc3b473cf4352a55|-2067579251||t20009.8951140948s|ffa009b951e8494a|191997|rds|local|vector|||0.02||
@@ -39,7 +39,9 @@ projection_matrix_A|stem|4a3557daa5b9b39e|d019eabc5cffa863|661bd951957f1025|-485
 raw_data|stem|4be0028aded9b198|c5a0d7c0324cd525|4318f48340e54c37|-979620141||t20050.7820410684s|cc74c863e536ba4d|130263|rds|local|vector|||0.002||
 run_inla_model|function|11b047c867474432|||||||||||||||
 save_fits|function|2d07f144ff3e9970|||||||||||||||
-save_fits_files|stem|d516706fa8112367|68746f9bd701a911|071cdc8a4cab7530|239136417|INLA_fits_output/Original.fits*INLA_fits_output/Reconstructed.fits*INLA_fits_output/SD.fits|t20050.8235410202s|c46654a77a1e398b|544320|file|local|vector|||0.008||
+save_fits_files|stem|57dac2e9a03bcd06|64c9dd150131ade7|9feb3ac12eda8656|239136417|INLA_fits_output/Original.fits*INLA_fits_output/Reconstructed.fits*INLA_fits_output/SD.fits|t20050.837488099s|c46654a77a1e398b|544320|file|local|vector|||0.005||
 save_inla_results|stem|c127ec8d9b9f3b76|557e63291b2fc4d3|3d8c86ac46af401f|-1132414018||t20009.8863480451s|44989414465ff33d|49|rds|local|vector|||0.003||
 spde_model|stem|198cbbd8e7bc49cc|c296a29f30a22894|5b019508970d27b3|-63863608||t20050.7820451772s|f7eeb3c46ae9ea46|137202|rds|local|vector|||0.046||
 stationary_inla|function|5254c28e27dd1d09|||||||||||||||
+unscale_collected|function|d72bdb50b9819c10|||||||||||||||
+unscalled_results|stem|f65f928dc6099ec4|5472a36373271216|d8e7ec9eef5e42cf|463932117||t20050.8374693606s|f2328b2c0afc47fe|624533|rds|local|vector|||0.003||

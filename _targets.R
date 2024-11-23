@@ -174,10 +174,15 @@ list(
     )
   ),
   
+  tar_target(
+    unscalled_results,
+    unscale_collected(inla_results_collected, scaling = TRUE)
+  ),
+  
   # 4. Save INLA Results as FITS Files
   tar_target(
     save_fits_files,
-    save_fits(inla_results_collected,header_data = header_data,
+    save_fits(unscalled_results,header_data = header_data,
               output_dir = "INLA_fits_output"),
     format = "file"
   ),
@@ -190,7 +195,7 @@ list(
   
   tar_target(
     plot_inla_results,
-    plot_inla(inla_results_collected, title_prefix = "INLA_Result", output_dir = "plots"),
+    plot_inla(unscalled_results, title_prefix = "INLA_Result", output_dir = "plots"),
     cue = tar_cue(mode = "always")
   )
 )
