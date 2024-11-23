@@ -151,8 +151,7 @@ list(
       shape = 'none', # Adjust shape as needed
       xcenter = model_params$xcenter,
       ycenter = model_params$ycenter,
-      eigens = model_stack$eigens,
-      spde = spde_model
+      eigens = model_stack$eigens
     )
   ),
   

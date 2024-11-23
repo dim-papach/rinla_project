@@ -376,8 +376,12 @@ run_inla_model <- function(stk, par, epar, spde, tolerance, restart, shape) {
 #' @return A list containing output and outputsd matrices.
 #'
 #' @examples
-#' projections <- project_inla_results(mesh, res, xini, xfin, yini, yfin, xsize, ysize, zoom, shape, xcenter, ycenter, eigens)
-project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize, ysize, zoom, shape, xcenter, ycenter, eigens, spde) {
+#' projections <- project_inla_results(mesh, res, xini, xfin, yini, 
+#'                                     yfin, xsize, ysize, zoom, shape, 
+#'                                     xcenter, ycenter, eigens)
+project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize, 
+                                 ysize, zoom, shape, xcenter, ycenter, 
+                                 eigens, spde) {
   # Create projector
   projector <- inla.mesh.projector(mesh, xlim = c(xini, xfin), ylim = c(yini, yfin),
                                    dim = zoom * c(xsize + 1, ysize + 1))
@@ -453,7 +457,8 @@ adjust_zoom <- function(output, outputsd, zoom) {
 
 #' Collect INLA Results
 #'
-#' This function collects and organizes the INLA results for output.
+#' This function collects and organizes the INLA results for output, ensuring 
+#' that the dimensions of the output matrices match those of the original grid.
 #'
 #' @param output The output matrix from the projection.
 #' @param outputsd The output standard deviation matrix from the projection.
@@ -469,81 +474,71 @@ adjust_zoom <- function(output, outputsd, zoom) {
 #' @param yfin The final y-coordinate.
 #' @param zoom The zoom factor applied.
 #'
-#' @return A list containing the collected INLA results.
+#' @return A list containing:
+#' - `out`: The original output matrix.
+#' - `image`: A matrix with the mapped response variable.
+#' - `erimage`: A matrix with mapped uncertainties (if provided).
+#' - `outsd`: The original output standard deviation matrix.
+#' - `x`, `y`, `z`: Scaled and reshaped coordinates and values.
+#' - `erz`: Reshaped standard deviation values.
 #'
 #' @examples
-#' final_results <- collect_inla_results(output, outputsd, x, y, par, epar, xsize, ysize, xini, xfin, yini, yfin, zoom)
-collect_inla_results <- function(output, outputsd, x, y, par, epar, xsize, ysize, xini, xfin, yini, yfin, zoom) {
-  # Step 1: Calculate bin sizes for mapping coordinates into matrix indices
-  xbin <- (xfin - xini) / (xsize + 1)
-  ybin <- (yfin - yini) / (ysize + 1)
+#' final_results <- collect_inla_results(output, outputsd, x, y, par, epar, 
+#'                                       xsize, ysize, xini, xfin, 
+#'                                       yini, yfin, zoom)
+collect_inla_results <- function(output, outputsd, x, y, par, epar, 
+                                 xsize, ysize, xini, xfin, 
+                                 yini, yfin, zoom) {
+  # Step 1: Calculate bin edges for the original grid
+  # Create sequences for x and y bins based on grid boundaries
+  xbins <- seq(xini, xfin, length.out = xsize + 1)
+  ybins <- seq(yini, yfin, length.out = ysize + 1)
   
-  # Step 2: Map coordinates into indices
-  xmat <- floor((x - xini) / xbin) + 1
-  ymat <- floor((y - yini) / ybin) + 1
+  # Step 2: Map coordinates to grid indices
+  # Use findInterval to map x and y coordinates to bin indices
+  xmat <- findInterval(x, xbins, all.inside = TRUE)
+  ymat <- findInterval(y, ybins, all.inside = TRUE)
   
-  # Step 3: Rescale xmat and ymat if necessary to fit matrix dimensions
-  nrows <- nrow(output)
-  ncols <- ncol(output)
-  if (all(xmat >= 1 & xmat <= nrows & ymat >= 1 & ymat <= ncols)) {
-    # No scaling needed
-    xmat_scaled <- xmat
-    ymat_scaled <- ymat
-    cat("No scaling was necessary.\n")
-  } else {
-    # Apply scaling to fit within matrix bounds
-    xmat_scaled <- round((xmat - min(xmat)) / (max(xmat) - min(xmat)) * (nrows - 1)) + 1
-    ymat_scaled <- round((ymat - min(ymat)) / (max(ymat) - min(ymat)) * (ncols - 1)) + 1
-    cat("Scaling was applied to xmat and ymat.\n")
-  }
-  
-  # Step 4: Debugging check for out-of-bound indices
-  cat("Length of xmat:", length(xmat), "\n")
-  cat("Length of xmat_scaled:", length(xmat_scaled), "\n")
-  cat("Length of ymat_scaled:", length(ymat_scaled), "\n")
-  cat("Length of par:", length(par), "\n")
-  cat("Dimensions of the result matrix:", dim(output), "\n")
-  # Check if scaling was necessary
-  if (all(xmat == xmat_scaled) & all(ymat == ymat_scaled)) {
-    cat("No scaling was necessary, xmat and ymat are already correctly mapped.\n")
-  } else {
-    cat("Scaling was applied to xmat and ymat.\n")
-  } 
-  
-  if (any(xmat_scaled > nrows | xmat_scaled < 1 | ymat_scaled > ncols | ymat_scaled < 1)) {
-    stop("Error: Scaled indices are out of bounds.")
-  }
-  
-  # Step 5: Initialize the image matrices
+  # Step 3: Initialize response variable image matrix
+  # Create a matrix for the response variable with dimensions matching the original grid
   timage <- matrix(NA, nrow = xsize + 1, ncol = ysize + 1)
-  for (i in 1:length(x)) {
-    timage[xmat_scaled[i], ymat_scaled[i]] <- par[i]
+  for (i in seq_along(x)) {
+    timage[xmat[i], ymat[i]] <- par[i]
   }
   
+  # Step 4: Initialize uncertainty matrix if provided
   terrimage <- NULL
   if (!is.null(epar)) {
+    # Create a matrix for uncertainties with the same dimensions
     terrimage <- matrix(NA, nrow = xsize + 1, ncol = ysize + 1)
-    for (i in 1:length(x)) {
-      terrimage[xmat_scaled[i], ymat_scaled[i]] <- epar[i]
+    for (i in seq_along(x)) {
+      terrimage[xmat[i], ymat[i]] <- epar[i]
     }
   }
   
-  # Step 6: Reshape the output and output standard deviation for further processing
+  # Step 5: Reshape the output matrices for visualization
+  # Melt the output matrix and adjust coordinates back to original scale
   mim <- reshape2::melt(output)
   colnames(mim) <- c("x", "y", "value")
-  xx <- mim$x / zoom - 1
-  yy <- mim$y / zoom - 1
-  zz <- mim$value   
+  mim$x <- (mim$x - 1) / zoom + xini
+  mim$y <- (mim$y - 1) / zoom + yini
+  zz <- mim$value  # Extract the reshaped values
   
+  # Repeat the process for the standard deviation matrix
   sdmim <- reshape2::melt(outputsd)
   colnames(sdmim) <- c("x", "y", "value")
-  erzz <- sdmim$value
+  erzz <- sdmim$value  # Extract the reshaped standard deviations
   
-  # Step 7: Return the collected results
-  return(list(out = output, image = timage, erimage = terrimage,
-              outsd = outputsd, x = xx, y = yy, z = zz, erz = erzz))
+  # Step 6: Return all collected and reshaped results
+  return(list(out = output,         # Original output matrix
+              image = timage,       # Response variable matrix
+              erimage = terrimage,  # Uncertainty matrix (if provided)
+              outsd = outputsd,     # Original output standard deviation matrix
+              x = mim$x,            # Rescaled x-coordinates
+              y = mim$y,            # Rescaled y-coordinates
+              z = zz,               # Reshaped response values
+              erz = erzz))          # Reshaped standard deviation values
 }
-
 
 # ---------------------------------------------------------------------------
 # Step 3: Save INLA Results as FITS Files
