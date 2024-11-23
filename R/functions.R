@@ -32,6 +32,30 @@ get_data <- function(file_path) {
   return(image_data)
 }
 
+#' Get Header from a FITS File
+#'
+#' This function reads image header from a FITS file.
+#'
+#' @param file_path A character string specifying the path to the FITS file.
+#'
+#' @return Header table of the original FITS file
+#'
+#' @examples
+#' image_data <- get_data("path/to/file.fits")
+get_header <- function(file_path) {
+  # Read the FITS file
+  fits_data <- readFITS(file_path)
+  
+  # Check if the FITS file contains image data
+  if (is.null(fits_data$header)) {
+    stop("Error: No image data found in the FITS file.")
+  }
+  
+  # Extract the image data from the FITS file
+  image_data <- fits_data$header
+  
+  return(image_data)
+}
 # ---------------------------------------------------------------------------
 # Step 2: Prepare Data for INLA Analysis
 # ---------------------------------------------------------------------------
@@ -66,7 +90,7 @@ prepare_data <- function(img) {
   logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with 0
   
   # Identify valid data points
-  valid <- which(!is.na(img) & !is.nan(img) & img != 0 
+  valid <- which(!is.na(img) & !is.nan(img) & img != 0
                  & !is.infinite(logimg) & !is.na(logimg) & !is.nan(logimg))
   
   # Check if there are any valid points
@@ -534,7 +558,7 @@ collect_inla_results <- function(output, outputsd, x, y, par, epar, xsize, ysize
 #'
 #' @examples
 #' save_fits(imginla, output_dir = "INLA_fits_output")
-save_fits <- function(imginla, output_dir = "INLA_fits_output"){
+save_fits <- function(imginla, header_data, output_dir = "INLA_fits_output"){
   if(!dir.exists(output_dir)){
     dir.create(output_dir)
   }
@@ -545,9 +569,9 @@ save_fits <- function(imginla, output_dir = "INLA_fits_output"){
   sd_image_file <- file.path(output_dir, "SD.fits")
   
   # Save FITS files
-  writeFITSim(imginla$image, file = original_image_file)
-  writeFITSim(imginla$out, file = reconstructed_image_file)
-  writeFITSim(imginla$outsd, file = sd_image_file)
+  writeFITSim(imginla$image, file = original_image_file, header = header_data)
+  writeFITSim(imginla$out, file = reconstructed_image_file, header = header_data)
+  writeFITSim(imginla$outsd, file = sd_image_file, header = header_data)
   return(c(original_image_file, reconstructed_image_file, sd_image_file))
 }
 

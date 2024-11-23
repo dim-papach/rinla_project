@@ -55,7 +55,10 @@ list(
     "Ha_line_map_masked_cropped.fits", # Replace with the actual path to your FITS file
     format = "file"
   ),
-  
+  tar_target(
+    header_data,
+    get_header(fits_file_path)
+  ),
   tar_target(
     raw_data,
     get_data(fits_file_path)
@@ -175,7 +178,8 @@ list(
   # 4. Save INLA Results as FITS Files
   tar_target(
     save_fits_files,
-    save_fits(inla_results_collected, output_dir = "INLA_fits_output"),
+    save_fits(inla_results_collected,header_data = header_data,
+              output_dir = "INLA_fits_output"),
     format = "file"
   ),
   
