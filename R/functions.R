@@ -611,7 +611,7 @@ save_fits <- function(imginla, header_data, output_dir = "INLA_fits_output"){
 #'
 #' @examples
 #' plot_inla(imginla, title_prefix = "INLA_Result")
-plot_inla <- function(inla_result, title_prefix = "INLA_Result", output_dir = "plots") {
+plot_inla <- function(inla_result, title_prefix = "INLA_Result", output_dir = "plots", scaling = TRUE) {
   # Create the output directory if it doesn't exist
   if (!dir.exists(output_dir)) {
     dir.create(output_dir)
@@ -622,10 +622,21 @@ plot_inla <- function(inla_result, title_prefix = "INLA_Result", output_dir = "p
   original_image <- inla_result$image
   error_image <- inla_result$erimage
   reconstructed_sd <- inla_result$outsd
-  x <- inla_result$x
-  y <- inla_result$y
-  z <- inla_result$z
-  erz <- inla_result$erz
+  if (scaling) {
+    # Iterate through each element in the list
+    x <- log10(inla_result$x)
+    y <- log10(inla_result$y)
+    z <- log10(inla_result$z)
+    erz <- log10(inla_result$erz)}
+      else {
+        x <- inla_result$x
+        y <- inla_result$y
+        z <- inla_result$z
+        erz <- inla_result$erz
+      }
+    
+  
+
   
   # Define file names
   original_image_file <- file.path(output_dir, paste0(title_prefix, "_Original_Image.png"))

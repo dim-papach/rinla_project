@@ -9,7 +9,7 @@ library(targets)
 
 # Set target options:
 tar_option_set(
-  packages = c("INLA", "FITSio", "reshape2", "ggplot2", "viridis")  # packages that your targets need to run
+  packages = c("INLA", "FITSio", "reshape2", "ggplot2", "viridis"),  # packages that your targets need to run
   # format = "qs", # Optionally set the default storage format. qs is fast.
   #
   # For distributed computing in tar_make(), supply a {crew} controller
@@ -17,7 +17,7 @@ tar_option_set(
   # Choose a controller that suits your needs. For example, the following
   # sets a controller with 2 workers which will run as local R processes:
   #
-  #   controller = crew::crew_controller_local(workers = 2)
+  #controller = crew::crew_controller_local(workers = 3)
   #
   # Alternatively, if you want workers to run on a high-performance computing
   # cluster, select a controller from the {crew.cluster} package. The following
@@ -37,11 +37,11 @@ tar_option_set(
 
 # tar_make_clustermq() is an older (pre-{crew}) way to do distributed computing
 # in {targets}, and its configuration for your machine is below.
-options(clustermq.scheduler = "multicore")
+#options(clustermq.scheduler = "multicore")
 
 # tar_make_future() is an older (pre-{crew}) way to do distributed computing
 # in {targets}, and its configuration for your machine is below.
-future::plan(future.callr::callr)
+#future::plan(future.callr::callr)
 
 # Run the R scripts in the R/ folder with your custom functions:
 tar_source()
@@ -52,7 +52,7 @@ list(
   # 1. Get Data
   tar_target(
     fits_file_path,
-    "Ha_line_map_masked_cropped.fits", # Replace with the actual path to your FITS file
+    "HI_6563s_masked.fits", # Replace with the actual path to your FITS file
     format = "file"
   ),
   tar_target(
@@ -92,7 +92,7 @@ list(
   
   tar_target(
     inla_mesh,
-    create_inla_mesh(model_params$x, model_params$y, cutoff = 5) # Adjust cutoff as needed
+    create_inla_mesh(model_params$x, model_params$y, cutoff = 0.1) # Adjust cutoff as needed
   ),
   
   tar_target(
