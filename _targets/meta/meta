@@ -1,5 +1,5 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
-.Random.seed|object|83ac875e585f6883|||||||||||||||
+.Random.seed|object|d95a57b332461439|||||||||||||||
 adjust_zoom|function|5c88ae90ffe207a7|||||||||||||||
 check_data_validity|function|1bf28bfdc70dbc89|||||||||||||||
 collect_inla_results|function|960b727fb4993bf8|||||||||||||||
@@ -8,7 +8,7 @@ comparison|stem||7e03d6f4046b0cd8|64ca3d13926ee74b|922833440||t20050.8286454367s
 compute_parameters|function|52c54b1318dfcd2e|||||||||||||||
 create_inla_mesh|function|86f56b227d5b0184|||||||||||||||
 data|stem|21e4c6d9b79c1b88|4525b922227c51ac|6dd9969cc67e4cae|1588979285||t20009.895113655s|52732a2f7ea32b90|82461|rds|local|vector|||0.003||
-data_validity_check|stem|17656ca132f3e9f7|308c39041f30c323|3f2a68ee1ab4afab|-97797077||t20056.4797635697s|a1c456b03adbfbf8|44|rds|local|vector|||0.017||
+data_validity_check|stem|17656ca132f3e9f7|308c39041f30c323|3f2a68ee1ab4afab|-97797077||t20187.6182580306s|a1c456b03adbfbf8|44|rds|local|vector|||0.027||
 define_spde_model|function|73663c188cc1633e|||||||||||||||
 extract_variables|function|630ad4fd729f3519|||||||||||||||
 file|stem|eddd8912ee5738af|d824d4d566884bc0|ef46db3751d8e999|-1301001980|NII 6584_line_map_masked_cropped.fits|t19969.6350944428s|eef608cd93f98515|178560|file|local|vector|||5.633||
@@ -27,7 +27,7 @@ plot|stem|17656ca132f3e9f7|64324406c76d2823|de42a9c65eaefb81|1931196220||t20009.
 plot_and_save_images|function|ee73a1d58c642d44|||||||||||||||
 plot_gonzalez|stem|004a426b5f539f11|25f60aa78110a367|5b01f3b24260e721|515298120||t20009.7997915152s|28430dc79d31ca40|875073|rds|local|vector|||1.322||
 plot_inla|function|7a0f76629e172d05|||||||||||||||
-plot_inla_results|stem|17656ca132f3e9f7|1adf9b81915605f7|4be57ded745d3a51|1701513505||t20056.4864528411s|a1c456b03adbfbf8|44|rds|local|vector|||6.58||
+plot_inla_results|stem|17656ca132f3e9f7|1adf9b81915605f7|4be57ded745d3a51|1701513505||t20187.6183684701s|a1c456b03adbfbf8|44|rds|local|vector|||9.448||
 prepare_data|function|3da7afc10a430115|||||||||||||||
 prepare_model_stack|function|7c96e6f1ced6d8e0|||||||||||||||
 prepared|stem|aabe6aa705afef0e|21129e74635bf474|fc3b473cf4352a55|-2067579251||t20009.8951140948s|ffa009b951e8494a|191997|rds|local|vector|||0.02||
