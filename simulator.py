@@ -157,7 +157,7 @@ class MaskGenerator:
         valid = (x >= 0) & (x < mask.shape[1]) & (y >= 0) & (y < mask.shape[0])
         mask[y[valid], x[valid]] = True
 
-class ImageProcessor:
+class FitsProcessor:
     """Handles creation and processing of image variants"""
     
     def __init__(self, cosmic_cfg: CosmicConfig, satellite_cfg: SatelliteConfig):
@@ -378,7 +378,7 @@ class SimulationPipeline:
     
     def __init__(self, cosmic_cfg: CosmicConfig, satellite_cfg: SatelliteConfig):
         self.mask_generator = MaskGenerator(cosmic_cfg, satellite_cfg)
-        self.image_processor = ImageProcessor(cosmic_cfg, satellite_cfg)
+        self.image_processor = FitsProcessor(cosmic_cfg, satellite_cfg)
         self.file_handler = FileHandler()
         self.plot_generator = PlotGenerator()
 
