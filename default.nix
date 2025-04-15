@@ -34,7 +34,9 @@ let
     latticeExtra 
     latex2exp 
     MASS
+    optparse
     parallelly
+    RcppCNPy
     rgl 
     rlang 
     rmarkdown 
@@ -46,6 +48,7 @@ let
     spatstat 
     stringr 
     targets 
+    tarchetypes
     viridis 
     visNetwork
     yaml;};
@@ -98,7 +101,7 @@ R = pkgs.R.overrideAttrs (oldAttrs: {
 
   # Python packages to be included
   python_pkgs = python311.withPackages (ps: with ps; [
-    numpy pandas matplotlib astropy radian
+    numpy pandas matplotlib astropy radian scipy
   ]);
 
 

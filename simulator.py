@@ -13,6 +13,8 @@ from typing import Dict, Tuple, Optional, Any
 import argparse
 import glob
 import os
+import tempfile
+import subprocess
 import numpy as np
 import matplotlib
 # Ensure matplotlib uses a non-interactive backend
@@ -191,17 +193,85 @@ class FitsProcessor:
                                data)
         }
 
+    def save_masked_variants(self,
+                            data: np.ndarray,
+                            masks: Dict[str, np.ndarray]) -> None:
+        """save masked variants to disk"""
+        masked_variants = {
+            'cosmic': np.where(masks['cosmic'], self.cosmic_cfg.value, data),
+            'satellite': np.where(masks['satellite'], 
+                                 self.satellite_cfg.value, data),
+            'combined': np.where(masks['combined'],
+                               np.maximum(self.cosmic_cfg.value,
+                                        self.satellite_cfg.value),
+                               data)
+        }
+        # Create directory if it doesn't exist
+        os.makedirs('variants', exist_ok=True)
+        # Save each masked variant to disk
+        for name, variant in masked_variants.items():
+            np.save(f'variants/{name}.npy', variant)
+            print(f"Saved {name}.npy")
+        print("Masked variants saved to disk.")
+        
+    def delete_masked_variants(self) -> None:
+        """Delete masked variants from disk"""
+        for name in ['cosmic', 'satellite', 'combined']:
+            try:
+                os.remove(f'variants/{name}.npy')
+                print(f"Deleted {name}.npy")
+            except FileNotFoundError:
+                print(f"{name}.npy not found, skipping deletion.") 
+        print("Masked variants deleted from disk.")
+    
     def process_variants(self, 
-                       variants: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
-        """Placeholder for artifact processing/removal logic
+                variants: Dict[str, np.ndarray],
+                output_dir: str = "INLA_output_NPY") -> Dict[str, np.ndarray]:
+        """Process each variant through the R targets pipeline.
         
         Args:
-            variants: Dictionary of image variants
+            variants: Dictionary of {variant_name: numpy_array} (e.g., {'cosmic': array})
+            output_dir: Directory to save processed results
             
         Returns:
-            Dictionary of processed images (currently unmodified)
+            Dictionary of processed arrays with same keys as input.
         """
-        return variants  # Implement processing pipeline here
+        processed = {}
+        os.makedirs("variants", exist_ok=True)  # Input dir for .npy files
+        os.makedirs(output_dir, exist_ok=True)   # Output dir for results
+
+        for variant_name, data in variants.items():
+            try:
+                # 1. Save input .npy file
+                input_path = f"variants/{variant_name}.npy"
+                np.save(input_path, data)
+                
+                # 2. Save the input path to a text file
+                path_file = f"variants/path.txt"
+                with open(path_file, "w") as f:
+                    f.write(input_path)
+                
+                # 3. Call R script, passing the path text file
+                subprocess.run([
+                    "Rscript",
+                    "run.R",
+                ], check=True)
+                
+                # 4. Load processed result
+                output_path = f"{output_dir}/{variant_name}.npy"
+                processed[variant_name] = np.load(output_path)
+                
+                # 5. Clean up temporary input
+                os.remove(input_path)
+                
+                # 6. Delete the path file after it is used
+                os.remove(path_file)
+                
+            except Exception as e:
+                print(f"Failed to process {variant_name}: {str(e)}")
+                processed[variant_name] = None  # Mark as failed
+
+        return processed
 
 class FileHandler:
     """Manages FITS file I/O and directory structure"""
@@ -378,7 +448,7 @@ class SimulationPipeline:
     
     def __init__(self, cosmic_cfg: CosmicConfig, satellite_cfg: SatelliteConfig):
         self.mask_generator = MaskGenerator(cosmic_cfg, satellite_cfg)
-        self.image_processor = FitsProcessor(cosmic_cfg, satellite_cfg)
+        self.fits_processor = FitsProcessor(cosmic_cfg, satellite_cfg)
         self.file_handler = FileHandler()
         self.plot_generator = PlotGenerator()
 
@@ -394,8 +464,10 @@ class SimulationPipeline:
             output_dir = self.file_handler.create_output_structure(basename)
 
             masks = self.mask_generator.generate_all_masks(data)
-            variants = self.image_processor.create_variants(data, masks)
-            processed = self.image_processor.process_variants(variants)
+            variants = self.fits_processor.create_variants(data, masks)
+            self.fits_processor.save_masked_variants(data, masks)
+            #self.fits_processor.delete_masked_variants()
+            processed = self.fits_processor.process_variants(variants)
 
             self.file_handler.save_outputs(output_dir, variants, masks, header)
             self.plot_generator.generate_all_plots(output_dir, variants, basename)

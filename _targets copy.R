@@ -1,10 +1,38 @@
+# Created by use_targets().
+# Follow the comments below to fill in this target script.
+# Then follow the manual to check and run the pipeline:
+#   https://books.ropensci.org/targets/walkthrough.html#inspect-the-pipeline
+
+# Load packages required to define the pipeline:
 library(targets)
-library(tarchetypes) # Load other packages as needed.
+# library(tarchetypes) # Load other packages as needed.
 
 # Set target options:
 tar_option_set(
-  packages = c("INLA", "FITSio", "reshape2", "ggplot2", "viridis", "optparse"),  # packages that your targets need to run
-
+  packages = c("INLA", "FITSio", "reshape2", "ggplot2", "viridis"),  # packages that your targets need to run
+  # format = "qs", # Optionally set the default storage format. qs is fast.
+  #
+  # For distributed computing in tar_make(), supply a {crew} controller
+  # as discussed at https://books.ropensci.org/targets/crew.html.
+  # Choose a controller that suits your needs. For example, the following
+  # sets a controller with 2 workers which will run as local R processes:
+  #
+  #controller = crew::crew_controller_local(workers = 3)
+  #
+  # Alternatively, if you want workers to run on a high-performance computing
+  # cluster, select a controller from the {crew.cluster} package. The following
+  # example is a controller for Sun Grid Engine (SGE).
+  # 
+  #   controller = crew.cluster::crew_controller_sge(
+  #     workers = 50,
+  #     # Many clusters install R as an environment module, and you can load it
+  #     # with the script_lines argument. To select a specific verison of R,
+  #     # you may need to include a version string, e.g. "module load R/4.3.0".
+  #     # Check with your system administrator if you are unsure.
+  #     script_lines = "module load R"
+  #   )
+  #
+  # Set other options as needed.
 )
 
 # tar_make_clustermq() is an older (pre-{crew}) way to do distributed computing
@@ -21,46 +49,36 @@ tar_source()
 
 # Replace the target list below with your own:
 list(
-
-  # 1. Load the .npy file
-  # 1.1 read the path from the file variables/path.txt
+  # 1. Get Data
   tar_target(
-    file_path,
-    "variants/path.txt",
+    fits_file_path,
+    "HI_6563s_masked.fits", # Replace with the actual path to your FITS file
     format = "file"
   ),
-  # 1.2 read the path from the file
   tar_target(
-    npy_path,
-    readLines(file_path, n = 1)
+    header_data,
+    get_header(fits_file_path)
   ),
-
-  tar_target(
-    npy_files,
-    npy_path,
-    format = "file"
-  ),
-  # 2. Read and process each .npy file using Python
   tar_target(
     raw_data,
-    load_npy(npy_files),
+    get_data(fits_file_path)
   ),
-
+  
   # 2. Prepare Data
   tar_target(
     #prepared_data,
     inla_variables,
-    prepare_data(raw_data),
+    prepare_data(raw_data)
   ),
-
+  
   tar_target(
     data_validity_check,
     check_data_validity(valid = inla_variables$valid,tx = inla_variables$x,
                         ty = inla_variables$y,logimg = inla_variables$logimg,
                         img = inla_variables$img),
-    cue = tar_cue(mode = "always"), # Ensure it stops if data is invalid
+    cue = tar_cue(mode = "always") # Ensure it stops if data is invalid
   ),
-
+  
   tar_target(
     model_params,
     compute_parameters(
@@ -68,15 +86,15 @@ list(
       tx = inla_variables$x,
       ty = inla_variables$y,
       logimg = inla_variables$logimg,
-      weight = 1, # Adjust weight as needed
-      )
+      weight = 1 # Adjust weight as needed
+    )
   ),
-
+  
   tar_target(
     inla_mesh,
-    create_inla_mesh(model_params$x, model_params$y, cutoff = 0.01) # Adjust cutoff as needed
+    create_inla_mesh(model_params$x, model_params$y, cutoff = 0.1) # Adjust cutoff as needed
   ),
-
+  
   tar_target(
     spde_model,
     define_spde_model(
@@ -86,12 +104,12 @@ list(
       p_sigma = c(2, 0.2)
     )
   ),
-
+  
   tar_target(
     projection_matrix_A,
     inla.spde.make.A(inla_mesh, loc = cbind(model_params$x, model_params$y))
   ),
-
+  
   tar_target(
     model_stack,
     prepare_model_stack(
@@ -106,7 +124,7 @@ list(
       ycenter = model_params$ycenter
     )
   ),
-
+  
   tar_target(
     inla_result,
     run_inla_model(
@@ -119,7 +137,7 @@ list(
       shape = 'none' # Adjust shape as needed
     )
   ),
-
+  
   tar_target(
     projected_results,
     project_inla_results(
@@ -136,7 +154,7 @@ list(
       eigens = model_stack$eigens
     )
   ),
-
+  
   tar_target(
     inla_results_collected,
     collect_inla_results(
@@ -155,23 +173,29 @@ list(
       zoom = 1 # Adjust zoom as needed
     )
   ),
-
+  
   tar_target(
     unscalled_results,
-    unscale_collected(inla_results_collected, scaling = TRUE),
+    unscale_collected(inla_results_collected, scaling = TRUE)
   ),
-
-  # 4. Save the result using the same file name
+  
+  # 4. Save INLA Results as FITS Files
   tar_target(
-    save_results,
-    {
-      fname <- basename(npy_files)  # extract just the filename
-      out_path <- file.path("INLA_output_NPY", fname)
-      dir.create("INLA_output_NPY", showWarnings = FALSE)
-      save_npy(unscalled_results, out_path)
-      out_path
-    },
+    save_fits_files,
+    save_fits(unscalled_results,header_data = header_data,
+              output_dir = "INLA_fits_output"),
     format = "file"
+  ),
+  
+  # 5. Plot and Save INLA Analysis Results
+  # tar_target(
+  #   plot_inla_images,
+  #   plot_and_save_images(prepared_data, inla_results_collected, outfile = "out_g", eroutfile = "error_g")
+  # ),
+  
+  tar_target(
+    plot_inla_results,
+    plot_inla(unscalled_results, title_prefix = "INLA_Result", output_dir = "plots"),
+    cue = tar_cue(mode = "always")
   )
-
 )
