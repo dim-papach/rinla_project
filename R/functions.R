@@ -1,6 +1,7 @@
 # Load necessary libraries (if not already loaded)
 library(INLA)
 library(reshape2)
+library(rlang)
 #load NPY file
 library(reticulate)
 
@@ -200,6 +201,9 @@ compute_parameters <- function(valid, tx, ty, logimg, weight, tepar = NULL) {
 #' @examples
 #' mesh <- create_inla_mesh(x, y, cutoff)
 create_inla_mesh <- function(x, y, max.edge = NULL) {
+  if (length(x) == 0 || length(y) == 0) {
+      stop("Error: Insufficient points to create a mesh.")
+  }
   # Calculate data range
   x_range <- diff(range(x))
   y_range <- diff(range(y))
@@ -331,6 +335,9 @@ prepare_model_stack <- function(shape, x, y, par, A, spde, weight, xcenter, ycen
 #' @examples
 #' res <- run_inla_model(stk, par, epar, spde, tolerance, restart, shape)
 run_inla_model <- function(stk, par, epar, spde, tolerance, restart, shape) {
+  if (is.null(stk) || !inherits(stk, "inla.data.stack")) {
+    stop("'stack' must inherit from class \"inla.data.stack\".")
+  }
   # Determine the formula based on shape
   if (shape == 'radius') {
     formula <- par ~ 0 + m + radius + radius_2 + f(i, model = spde)
@@ -689,7 +696,9 @@ project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsiz
                                          shape, xcenter, ycenter, eigens, spde, valid = NULL, 
                                          tx = NULL, ty = NULL, logimg = NULL, weight = NULL, 
                                          tepar = NULL) {
-  
+  if (is.null(mesh) || is.null(res)) {
+      stop("Error: Mesh and result inputs cannot be NULL.")
+  }
   # 1. Initialize projection grid
   projector <- create_projector(mesh, c(xini, xfin), c(yini, yfin), zoom, xsize, ysize)
   

@@ -48,6 +48,7 @@ let
     spatstat 
     stringr 
     targets 
+    testthat
     tarchetypes
     viridis 
     visNetwork
