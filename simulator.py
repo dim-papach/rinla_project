@@ -74,7 +74,7 @@ class MaskGenerator:
     def __init__(self, cosmic_cfg: CosmicConfig, satellite_cfg: SatelliteConfig):
         self.cosmic_cfg = cosmic_cfg
         self.satellite_cfg = satellite_cfg
-        self.rng = np.random.default_rng(cosmic_cfg.seed)
+        self.rng = np.random.default_rng(cosmic_cfg.seed)  # Use a single RNG instance
 
     def generate_all_masks(self, data: np.ndarray) -> Dict[str, np.ndarray]:
         """Generate complete set of boolean masks
@@ -88,6 +88,13 @@ class MaskGenerator:
             - 'satellite': Satellite trail pixels
             - 'combined': Union of both mask types
         """
+        if data.size == 0:
+            return {
+                'cosmic': np.zeros_like(data, dtype=bool),
+                'satellite': np.zeros_like(data, dtype=bool),
+                'combined': np.zeros_like(data, dtype=bool),
+            }
+
         masks = {
             'cosmic': self._generate_cosmic_mask(data),
             'satellite': self._generate_satellite_mask(data.shape),
@@ -132,16 +139,16 @@ class MaskGenerator:
                                 width: int, 
                                 height: int) -> Tuple[Tuple[int, int], float]:
         """Generate random starting point and angle for trails"""
-        edge = np.random.choice(['top', 'bottom', 'left', 'right'])
+        edge = self.rng.choice(['top', 'bottom', 'left', 'right'])
 
         if edge in ['top', 'bottom']:
-            x = np.random.randint(0, width)
+            x = self.rng.integers(0, width)
             y = 0 if edge == 'top' else height - 1
         else:
-            y = np.random.randint(0, height)
+            y = self.rng.integers(0, height)
             x = 0 if edge == 'left' else width - 1
 
-        angle = np.random.uniform(self.satellite_cfg.min_angle,
+        angle = self.rng.uniform(self.satellite_cfg.min_angle,
                                 self.satellite_cfg.max_angle)
         return (x, y), np.deg2rad(angle)
 
@@ -232,6 +239,8 @@ class FitsProcessor:
                                data)
         }
         # Create directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+
         os.makedirs('variants', exist_ok=True)
         # Save each masked variant to disk
         for name, variant in masked_variants.items():
@@ -250,8 +259,8 @@ class FitsProcessor:
         print("Masked variants deleted from disk.")
     
     def process_variants(self, 
-                variants: Dict[str, np.ndarray],
-                output_dir: str = "INLA_output_NPY") -> Dict[str, np.ndarray]:
+                         variants: Dict[str, np.ndarray],
+                         output_dir: str = "INLA_output_NPY") -> Dict[str, np.ndarray]:
         """Process each variant through the R targets pipeline.
         
         Args:
@@ -289,15 +298,16 @@ class FitsProcessor:
                 output_path = f"{output_dir}/{variant_name}/out.npy"
                 processed[variant_name] = np.load(output_path)
                 
-                # 5. Clean up temporary input
-                os.remove(input_path)
-                
-                # 6. Delete the path file after it is used
-                os.remove(path_file)
-                
             except Exception as e:
                 print(f"Failed to process {variant_name}:\n {Fore.RED}Error: {str(e)}{Fore.RESET}")
                 processed[variant_name] = None  # Mark as failed
+
+            finally:
+                # 5. Ensure temporary files are removed
+                if os.path.exists(input_path):
+                    os.remove(input_path)
+                if os.path.exists(path_file):
+                    os.remove(path_file)
 
         return processed
 
@@ -625,4 +635,3 @@ def main() -> None:
 
 if __name__ == '__main__':
     main()
-    
