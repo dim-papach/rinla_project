@@ -66,6 +66,9 @@ prepare_data <- function(img) {
   # Create x and y arrays using matrix indexing
   x <- matrix(rep(1:dims[1], dims[2]), nrow = dims[1], ncol = dims[2])
   y <- matrix(rep(1:dims[2], each = dims[1]), nrow = dims[1], ncol = dims[2])
+  # replace blanks and null values with NA
+  img[img == "BLANK"] <- NA
+  img[img == "blank"] <- NA
   # Normalize data
   logimg <- log10(img)
   logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with 0
@@ -186,24 +189,35 @@ compute_parameters <- function(valid, tx, ty, logimg, weight, tepar = NULL) {
 #'
 #' @param x A vector of x-coordinates.
 #' @param y A vector of y-coordinates.
-#' @param cutoff A numeric value representing the cutoff for the mesh tessellation.
 #'
 #' @return An INLA mesh object.
 #'
 #' @examples
 #' mesh <- create_inla_mesh(x, y, cutoff)
-create_inla_mesh <- function(x, y, cutoff) {
-  # Create a mesh (tessellation)
-  mesh <- tryCatch(
-    inla.mesh.2d(cbind(x, y), max.n = -1, cutoff = max(cutoff,1e-5)),
-    error = function(e) stop("Error creating INLA mesh: ", e$message)
-  )
-  # Check that the mesh was created successfully and has vertices
-  if (is.null(mesh) || length(mesh$loc) == 0) {
-    stop("Error: Mesh creation failed or resulted in an empty mesh.")
+create_inla_mesh <- function(x, y, max.edge = NULL) {
+  # Calculate data range
+  x_range <- diff(range(x))
+  y_range <- diff(range(y))
+  max.range <- max(x_range, y_range)
+  
+  # Set default max.edge if not provided
+  if(is.null(max.edge)) {
+    max.edge <- max.range / 10  # Default to 10% of maximum range
   }
-
-  cat("Number of mesh vertices: ", nrow(mesh$loc), "\n") # Debugging output
+  
+  # Calculate cutoff as max.edge/6 (ensuring it's ≥ 1e-5)
+  cutoff <- max(max.edge / 6, 1e-5)
+  
+  # Create mesh
+  mesh <- tryCatch(
+    INLA::inla.mesh.2d(
+      loc = cbind(x, y),
+      max.edge = c(max.edge, max.edge * 1.5),  # Inner and outer resolution
+      cutoff = cutoff,
+      offset = c(max.edge * 0.5, max.edge * 2)  # Boundary extensions
+    ),
+    error = function(e) stop("Mesh creation failed: ", e$message))
+  
   return(mesh)
 }
 
@@ -468,8 +482,8 @@ adjust_zoom <- function(output, outputsd, zoom) {
 #'                                       xsize, ysize, xini, xfin,
 #'                                       yini, yfin, zoom)
 collect_inla_results <- function(output, outputsd, x, y, par, epar,
-                                 xsize, ysize, xini, xfin,
-                                 yini, yfin, zoom) {
+                                xsize, ysize, xini, xfin,
+                                yini, yfin, zoom) {
   # Step 1: Calculate bin edges for the original grid
   # Create sequences for x and y bins based on grid boundaries
   xbins <- seq(xini, xfin, length.out = xsize + 1)
@@ -486,7 +500,7 @@ collect_inla_results <- function(output, outputsd, x, y, par, epar,
   for (i in seq_along(x)) {
     timage[xmat[i], ymat[i]] <- par[i]
   }
-
+  
   # Step 4: Initialize uncertainty matrix if provided
   terrimage <- NULL
   if (!is.null(epar)) {
@@ -496,7 +510,7 @@ collect_inla_results <- function(output, outputsd, x, y, par, epar,
       terrimage[xmat[i], ymat[i]] <- epar[i]
     }
   }
-
+  
   # Step 5: Reshape the output matrices for visualization
   # Melt the output matrix and adjust coordinates back to original scale
   mim <- reshape2::melt(output)
@@ -504,7 +518,7 @@ collect_inla_results <- function(output, outputsd, x, y, par, epar,
   mim$x <- (mim$x - 1) / zoom + xini
   mim$y <- (mim$y - 1) / zoom + yini
   zz <- mim$value  # Extract the reshaped values
-
+  
   # Repeat the process for the standard deviation matrix
   sdmim <- reshape2::melt(outputsd)
   colnames(sdmim) <- c("x", "y", "value")
@@ -596,6 +610,6 @@ save_npy <- function(array_list, dir_path) {
     np$save(file_path, arr)
     saved_files <- c(saved_files, file_path)
   }
-
+  
   invisible(saved_files)
 }
