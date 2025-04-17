@@ -33,7 +33,7 @@ load_path <- function(file_path) {
 #' data <- get_data("path/to/file.npy")
 load_npy <- function(file_path) {
   np <- import("numpy")
-  data <- np$load(file_path)
+  data <- t(np$load(file_path))
   return(data)
 }
 
@@ -47,13 +47,14 @@ load_npy <- function(file_path) {
 #' creating coordinate matrices, identifying valid data points, and normalizing the image data.
 #'
 #' @param img A numeric matrix representing the image data to be analyzed.
+#' @param scaling If scale=TRUE then turn the values to log
 #'
 #' @return A list containing prepared data for INLA analysis.
 #'
 #' @examples
 #' img <- matrix(runif(100), nrow = 10, ncol = 10)
 #' prepared_data <- prepare_data(img)
-prepare_data <- function(img) {
+prepare_data <- function(img, scaling = TRUE) {
   # Check if the input is a valid matrix
   if (is.null(dim(img)) || length(dim(img)) != 2) {
     stop("Error: The image data is not a 2D matrix.")
@@ -70,9 +71,13 @@ prepare_data <- function(img) {
   img[img == "BLANK"] <- NA
   img[img == "blank"] <- NA
   # Normalize data
+  if (scaling==TRUE){
   logimg <- log10(img)
   logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with 0
-
+  }
+  else{
+    logimg <- img
+  }
   # Identify valid data points
   valid <- which(!is.na(img) & !is.nan(img) & img != 0
                  & !is.infinite(logimg) & !is.na(logimg) & !is.nan(logimg))
@@ -83,8 +88,8 @@ prepare_data <- function(img) {
   }
 
   # Set dimensions
-  xsize <- dims[2]
-  ysize <- dims[1]
+  xsize <- dims[1]
+  ysize <- dims[2]
   xfin <- xsize
   yfin <- ysize
 
@@ -206,7 +211,7 @@ create_inla_mesh <- function(x, y, max.edge = NULL) {
   }
   
   # Calculate cutoff as max.edge/6 (ensuring it's ≥ 1e-5)
-  cutoff <- max(max.edge / 6, 1e-5)
+  cutoff <- max(max.edge / 30, 1e-5)
   
   # Create mesh
   mesh <- tryCatch(
@@ -450,91 +455,6 @@ adjust_zoom <- function(output, outputsd, zoom) {
   return(list(output = output, outputsd = outputsd))
 }
 
-#' Collect INLA Results
-#'
-#' This function collects and organizes the INLA results for output, ensuring
-#' that the dimensions of the output matrices match those of the original grid.
-#'
-#' @param output The output matrix from the projection.
-#' @param outputsd The output standard deviation matrix from the projection.
-#' @param x The x-coordinates used in the model.
-#' @param y The y-coordinates used in the model.
-#' @param par The response variable values.
-#' @param epar Error parameters (uncertainties), default is NULL.
-#' @param xsize The number of columns in the image data.
-#' @param ysize The number of rows in the image data.
-#' @param xini The initial x-coordinate.
-#' @param xfin The final x-coordinate.
-#' @param yini The initial y-coordinate.
-#' @param yfin The final y-coordinate.
-#' @param zoom The zoom factor applied.
-#'
-#' @return A list containing:
-#' - `out`: The original output matrix.
-#' - `image`: A matrix with the mapped response variable.
-#' - `erimage`: A matrix with mapped uncertainties (if provided).
-#' - `outsd`: The original output standard deviation matrix.
-#' - `x`, `y`, `z`: Scaled and reshaped coordinates and values.
-#' - `erz`: Reshaped standard deviation values.
-#'
-#' @examples
-#' final_results <- collect_inla_results(output, outputsd, x, y, par, epar,
-#'                                       xsize, ysize, xini, xfin,
-#'                                       yini, yfin, zoom)
-collect_inla_results <- function(output, outputsd, x, y, par, epar,
-                                xsize, ysize, xini, xfin,
-                                yini, yfin, zoom) {
-  # Step 1: Calculate bin edges for the original grid
-  # Create sequences for x and y bins based on grid boundaries
-  xbins <- seq(xini, xfin, length.out = xsize + 1)
-  ybins <- seq(yini, yfin, length.out = ysize + 1)
-
-  # Step 2: Map coordinates to grid indices
-  # Use findInterval to map x and y coordinates to bin indices
-  xmat <- findInterval(x, xbins, all.inside = TRUE)
-  ymat <- findInterval(y, ybins, all.inside = TRUE)
-
-  # Step 3: Initialize response variable image matrix
-  # Create a matrix for the response variable with dimensions matching the original grid
-  timage <- matrix(NA, nrow = xsize + 1, ncol = ysize + 1)
-  for (i in seq_along(x)) {
-    timage[xmat[i], ymat[i]] <- par[i]
-  }
-  
-  # Step 4: Initialize uncertainty matrix if provided
-  terrimage <- NULL
-  if (!is.null(epar)) {
-    # Create a matrix for uncertainties with the same dimensions
-    terrimage <- matrix(NA, nrow = xsize + 1, ncol = ysize + 1)
-    for (i in seq_along(x)) {
-      terrimage[xmat[i], ymat[i]] <- epar[i]
-    }
-  }
-  
-  # Step 5: Reshape the output matrices for visualization
-  # Melt the output matrix and adjust coordinates back to original scale
-  mim <- reshape2::melt(output)
-  colnames(mim) <- c("x", "y", "value")
-  mim$x <- (mim$x - 1) / zoom + xini
-  mim$y <- (mim$y - 1) / zoom + yini
-  zz <- mim$value  # Extract the reshaped values
-  
-  # Repeat the process for the standard deviation matrix
-  sdmim <- reshape2::melt(outputsd)
-  colnames(sdmim) <- c("x", "y", "value")
-  erzz <- sdmim$value  # Extract the reshaped standard deviations
-
-  # Step 6: Return all collected and reshaped results
-  return(list(out = output,         # Original output matrix
-              image = timage,       # Response variable matrix
-              erimage = terrimage,  # Uncertainty matrix (if provided)
-              outsd = outputsd,     # Original output standard deviation matrix
-              x = mim$x,            # Rescaled x-coordinates
-              y = mim$y,            # Rescaled y-coordinates
-              z = zz,               # Reshaped response values
-              erz = erzz))          # Reshaped standard deviation values
-}
-
 #' Unscale Collected INLA Results Dynamically
 #'
 #' This function iterates over all elements of the collected results from `collect_inla_results`
@@ -588,8 +508,11 @@ unscale_collected <- function(collected, scaling = FALSE) {
 #' }
 
 save_npy <- function(array_list, dir_path) {
-  if (!is.list(array_list) || is.null(names(array_list))) {
-    stop("Input must be a *named list* of matrices or arrays.")
+  if (!is.list(array_list)) {
+    stop("Input must be a list of matrices or arrays.")
+  }
+  if (is.null(names(array_list)) || any(names(array_list) == "")) {
+    stop("Input list must have named elements. Ensure all elements are named.")
   }
 
   if (!dir.exists(dir_path)) {
@@ -612,4 +535,207 @@ save_npy <- function(array_list, dir_path) {
   }
   
   invisible(saved_files)
+}
+
+
+#' Create a Mesh Projector Object
+#'
+#' Initializes a projector for mapping INLA model results onto a grid.
+#'
+#' @param mesh An INLA mesh object.
+#' @param xlim Numeric vector of length 2: x-axis limits (min, max).
+#' @param ylim Numeric vector of length 2: y-axis limits (min, max).
+#' @param zoom Numeric: Grid resolution multiplier.
+#' @param xsize Integer: Base grid dimension in x-direction.
+#' @param ysize Integer: Base grid dimension in y-direction.
+#' @return An `inla.mesh.projector` object.
+#' @examples
+#' # projector <- create_projector(mesh, c(0, 10), c(0, 10), zoom = 2, 100, 100)
+create_projector <- function(mesh, xlim, ylim, zoom, xsize, ysize) {
+  inla.mesh.projector(
+    mesh,
+    xlim = xlim,
+    ylim = ylim,
+    dim = zoom * c(xsize, ysize))
+}
+
+
+#' Compute Spatial Trend Component
+#'
+#' Calculates fixed-effects spatial trend (radius/ellipse/none) for projection.
+#'
+#' @param projector An `inla.mesh.projector` object.
+#' @param shape Character: Spatial trend type ('radius', 'ellipse', or 'none').
+#' @param res INLA model result object.
+#' @param xcenter Numeric: X-coordinate of trend center.
+#' @param ycenter Numeric: Y-coordinate of trend center.
+#' @param eigens List containing eigenvectors/values (required for 'ellipse').
+#' @return Numeric vector of spatial trend values at grid locations.
+#' @note For 'ellipse', eigenvectors define axes orientation, eigenvalues define scaling.
+compute_spatial_term <- function(projector, shape, res, xcenter, ycenter, eigens) {
+  # Generate grid coordinates
+  px <- rep(projector$x, each = length(projector$y))
+  py <- rep(projector$y, length(projector$x))
+  
+  if (shape == 'radius') {
+    # Radial distance from center point
+    projected <- sqrt((px - xcenter)^2 + (py - ycenter)^2)
+    term <- res$summary.fixed$mean[1] + 
+      res$summary.fixed$mean[2] * projected + 
+      res$summary.fixed$mean[3] * projected^2
+    
+  } else if (shape == 'ellipse') {
+    # Mahalanobis distance using eigenvalue decomposition
+    centered_coords <- cbind(px - xcenter, py - ycenter)
+    projected <- (centered_coords %*% eigens$vectors[, 1])^2 / eigens$values[1] +
+      (centered_coords %*% eigens$vectors[, 2])^2 / eigens$values[2]
+    term <- res$summary.fixed$mean[1] + 
+      res$summary.fixed$mean[2] * projected + 
+      res$summary.fixed$mean[3] * projected^2
+    
+  } else if (shape == 'none') {
+    # Constant intercept only
+    term <- res$summary.fixed$mean[1]
+  } else {
+    stop("Invalid shape parameter. Use 'radius', 'ellipse', or 'none'.")
+  }
+  
+  return(term)
+}
+
+
+#' Process Validation Data
+#'
+#' Converts validation data into grid-aligned matrices for comparison.
+#'
+#' @param valid Logical/numeric vector: Indices of validation points.
+#' @param tx Numeric vector: X-coordinates of full dataset.
+#' @param ty Numeric vector: Y-coordinates of full dataset.
+#' @param logimg Numeric vector: Observed values (log-transformed).
+#' @param weight Numeric vector: Observation weights.
+#' @param tepar Numeric vector: Tapering parameters.
+#' @param mesh INLA mesh object containing spatial locations.
+#' @return List with:
+#'   - timage: Matrix of validation values in grid space
+#'   - terrimage: Matrix of validation errors (if available)
+#'   - x,y: Rescaled coordinates
+#'   - z,erz: Values and errors at validation points
+process_validation <- function(valid, tx, ty, logimg, weight, tepar, mesh) {
+  # Compute parameters using user-defined function
+  params <- compute_parameters(valid, tx, ty, logimg, weight, tepar)
+  
+  # Extract validation locations from mesh
+  mim <- mesh$loc[valid, ]
+  
+  # Create gridded observation matrix
+  timage <- matrix(NA, 
+                   nrow = length(unique(ty)), 
+                   ncol = length(unique(tx)))
+  timage[cbind(as.numeric(factor(ty[valid])),  # Map to grid indices
+               as.numeric(factor(tx[valid])))] <- params$par
+  
+  # Create error matrix if available
+  terrimage <- if (!is.null(params$epar)) {
+    matrix(NA, nrow = length(unique(ty)), ncol = length(unique(tx)))
+    terrimage[cbind(as.numeric(factor(ty[valid])), 
+                    as.numeric(factor(tx[valid])))] <- sqrt(params$epar)
+    terrimage
+  } else NULL
+  
+  list(
+    timage = timage,
+    terrimage = terrimage,
+    x = mim$x,
+    y = mim$y,
+    z = params$par,
+    erz = if (!is.null(params$epar)) sqrt(params$epar) else NULL
+  )
+}
+
+
+#' Project INLA Results with Validation Support
+#'
+#' Main function to project INLA model results onto a grid, optionally incorporating validation data.
+#'
+#' @param mesh INLA mesh object.
+#' @param res INLA model result object.
+#' @param xini,xfin Numeric: X-axis limits.
+#' @param yini,yfin Numeric: Y-axis limits.
+#' @param xsize,ysize Integer: Base grid dimensions.
+#' @param zoom Numeric: Resolution multiplier.
+#' @param shape Character: Spatial trend type.
+#' @param xcenter,ycenter Numeric: Center coordinates for spatial trend.
+#' @param eigens List: Eigenvectors/values for ellipse (if needed).
+#' @param spde SPDE model object (unused in projection, retained for compatibility).
+#' @param valid Optional: Validation point indices.
+#' @param tx,ty Optional: Coordinate vectors for validation data.
+#' @param logimg Optional: Observed values for validation.
+#' @param weight Optional: Weights for validation.
+#' @param tepar Optional: Taper parameters for validation.
+#' @return List containing:
+#'   - out: Projected mean field matrix
+#'   - outsd: Projected standard deviation matrix
+#'   - image: Validation observations in grid space
+#'   - erimage: Validation errors in grid space
+#'   - x,y,z,erz: Validation data in original coordinates
+#' @examples
+#' # Basic projection
+#' results <- project_inla_results_collect(mesh, res, 0, 10, 0, 10, 100, 100, 2, 'none')
+#'
+#' # With validation data
+#' val_results <- project_inla_results_collect(mesh, res, 0, 10, 0, 10, 100, 100, 2, 'radius',
+#'                                            valid = val_indices, tx = xcoords, ty = ycoords)
+project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsize, ysize, zoom, 
+                                         shape, xcenter, ycenter, eigens, spde, valid = NULL, 
+                                         tx = NULL, ty = NULL, logimg = NULL, weight = NULL, 
+                                         tepar = NULL) {
+  
+  # 1. Initialize projection grid
+  projector <- create_projector(mesh, c(xini, xfin), c(yini, yfin), zoom, xsize, ysize)
+  
+  # 2. Adjust center coordinates if validation data provided
+  if (!is.null(valid)) {
+    params <- compute_parameters(valid, tx, ty, logimg, weight, tepar)
+    xcenter <- params$xcenter
+    ycenter <- params$ycenter
+  }
+  
+  # 3. Calculate spatial trend component
+  spatial_term <- compute_spatial_term(projector, shape, res, xcenter, ycenter, eigens)
+  
+  # 4. Project random effects and combine with trend
+  random_effects <- inla.mesh.project(projector, res$summary.random$i$mean)
+  output <- (random_effects) + 
+   t(matrix(spatial_term, nrow = zoom * (ysize), ncol = zoom * (xsize)))
+  
+  # 5. Project standard deviations
+  outputsd <- inla.mesh.project(projector, res$summary.random$i$sd)
+  
+  # 6. Process validation data if provided
+  validation_data <- if (!is.null(valid)) {
+    process_validation(valid, tx, ty, logimg, weight, tepar, mesh)
+  } else NULL
+
+  #7. Check if out and image dimensions match
+  if (!is.null(validation_data)) {
+    if (any(dim(output) != dim(validation_data$timage))) {
+      stop("Error: Dimensions of output and validation data do not match.")
+    }
+    else {
+      print("HURRAY")
+    }
+  }
+  else {print("empty")}
+  
+  # 8. Return comprehensive results
+  list(
+    out = t(output),
+    outsd = t(outputsd),
+    image = validation_data$timage %||% NULL,  # Using %||% for null coalescing
+    erimage = validation_data$terrimage %||% NULL,
+    x = validation_data$x %||% NULL,
+    y = validation_data$y %||% NULL,
+    z = validation_data$z %||% NULL,
+    erz = validation_data$erz %||% NULL
+  )
 }

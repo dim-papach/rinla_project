@@ -3,21 +3,10 @@ library(tarchetypes) # Load other packages as needed.
 
 # Set target options:
 tar_option_set(
-  packages = c("INLA", "FITSio", "reshape2", "ggplot2", "viridis", "optparse"),  # packages that your targets need to run
+  packages = c("INLA", "FITSio", "reshape2", "ggplot2", "viridis", "optparse", "rlang"),  # packages that your targets need to run
+  )
 
-)
-
-# tar_make_clustermq() is an older (pre-{crew}) way to do distributed computing
-# in {targets}, and its configuration for your machine is below.
-#options(clustermq.scheduler = "multicore")
-
-# tar_make_future() is an older (pre-{crew}) way to do distributed computing
-# in {targets}, and its configuration for your machine is below.
-#future::plan(future.callr::callr)
-
-# Run the R scripts in the R/ folder with your custom functions:
 tar_source()
-# source("other_functions.R") # Source other scripts as needed.
 
 # Replace the target list below with your own:
 list(
@@ -26,31 +15,21 @@ list(
   # 1.1 read the path from the file variables/path.txt
   tar_target(
     file_path,
-    "variants/path.txt",
+    "variants/cosmic.npy",
     format = "file"
-  ),
-  # 1.2 read the path from the file
-  tar_target(
-    npy_path,
-    readLines(file_path, n = 1)
   ),
 
-  tar_target(
-    npy_files,
-    npy_path,
-    format = "file"
-  ),
   # 2. Read and process each .npy file using Python
   tar_target(
     raw_data,
-    load_npy(npy_files),
+    load_npy(file_path),
   ),
 
   # 2. Prepare Data
   tar_target(
     #prepared_data,
     inla_variables,
-    prepare_data(raw_data),
+    prepare_data(raw_data, scaling = FALSE),
   ),
 
   tar_target(
@@ -74,7 +53,7 @@ list(
 
   tar_target(
     inla_mesh,
-    create_inla_mesh(model_params$x, model_params$y, cutoff = 0.01) # Adjust cutoff as needed
+    create_inla_mesh(model_params$x, model_params$y) # Adjust cutoff as needed
   ),
 
   tar_target(
@@ -129,6 +108,7 @@ list(
       yini = 0, yfin = inla_variables$yfin,
       xsize = inla_variables$xsize,
       ysize = inla_variables$ysize,
+      spde = spde_model,
       zoom = 1, # Adjust zoom as needed
       shape = 'none', # Adjust shape as needed
       xcenter = model_params$xcenter,
@@ -139,33 +119,39 @@ list(
 
   tar_target(
     inla_results_collected,
-    collect_inla_results(
-      output = projected_results$output,
-      outputsd = projected_results$outputsd,
-      x = model_params$x,
-      y = model_params$y,
-      par = model_params$par,
-      epar = model_params$epar,
+    project_inla_results_collect(
+      mesh = inla_mesh,
+      res = inla_result,
+      xini = 0, xfin = inla_variables$xfin,
+      yini = 0, yfin = inla_variables$yfin,
       xsize = inla_variables$xsize,
       ysize = inla_variables$ysize,
-      xini = 0,
-      xfin = inla_variables$xfin,
-      yini = 0,
-      yfin = inla_variables$yfin,
-      zoom = 1 # Adjust zoom as needed
+      spde = spde_model,
+      zoom = 1, # Adjust zoom as needed
+      shape = 'none', # Adjust shape as needed
+      xcenter = model_params$xcenter,
+      ycenter = model_params$ycenter,
+      eigens = model_stack$eigens
     )
   ),
 
   tar_target(
     unscalled_results,
-    unscale_collected(inla_results_collected, scaling = TRUE),
+    unscale_collected(inla_results_collected, scaling = FALSE),
   ),
-
+  # 3. Plot the results with image()
+  # tar_target(
+  #   ploting,
+  #   image(t(unscaled_results$out), col = heat.colors(256), main = "Corrected Orientation")
+  #   
+  # ),
+  # 
+  
   # 4. Save the result using the same file name
   tar_target(
     save_results,
     {
-      fname <- basename(npy_files)  # extract just the filename
+      fname <- basename("TESTTIIIING")  # extract just the filename
       out_path <- file.path("INLA_output_NPY", fname)
       dir.create("INLA_output_NPY", showWarnings = FALSE)
       save_npy(unscalled_results, out_path)
@@ -173,5 +159,4 @@ list(
     },
     format = "file"
   )
-
 )
