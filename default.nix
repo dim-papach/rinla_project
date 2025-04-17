@@ -63,7 +63,7 @@ let
       sha256 = "sha256-0F171f3wuYm83uCcJKBKIrtu2SrSEI29PEe7iZeTYes=";
     };
     propagatedBuildInputs = builtins.attrValues {
-      inherit (pkgs.rPackages) assertthat raster RColorBrewer sp reshape2 tidyr cowplot ggplot2;
+      inherit (pkgs.rPackages) assertthat raster RColorBrewer sp reshape2 tidyr cowplot ggplot2 viridis optparse;
     };
   }) ];
 

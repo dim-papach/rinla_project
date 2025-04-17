@@ -1,4 +1,4 @@
-#!/nix/store/130rh1iwc2k0qqksgf09663sdbds5vml-R-4.3.2/bin/Rscript
+#!/nix/store/130rh1iwc2k0qqksgf09663sdbds5vml-R-4.3.2/bin/R
 
 # This is a helper script to run the pipeline.
 # Choose how to execute the pipeline below.
