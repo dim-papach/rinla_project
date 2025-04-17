@@ -160,7 +160,27 @@ class MaskGenerator:
         mask[y[valid], x[valid]] = True
 
 class FitsProcessor:
-    """Handles creation and processing of image variants"""
+    """FitsProcessor is a class designed to handle the creation, processing, saving, 
+    and deletion of image variants based on input data and masks. It also integrates 
+    with an external R script pipeline for further processing of these variants.
+    
+    Methods:
+        - __init__(cosmic_cfg: CosmicConfig, satellite_cfg: SatelliteConfig):
+            Initializes the FitsProcessor with configuration objects for cosmic 
+            rays and satellite trails.
+        - create_variants(data: np.ndarray, masks: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+            Creates image variants by applying cosmic ray and satellite trail 
+            artifacts to the input data based on provided masks.
+        - save_masked_variants(data: np.ndarray, masks: Dict[str, np.ndarray]) -> None:
+            Saves the masked image variants (cosmic, satellite, combined) to disk 
+            in a directory named 'variants'.
+        - delete_masked_variants() -> None:
+            Deletes the saved masked image variants from the disk.
+        - process_variants(variants: Dict[str, np.ndarray], output_dir: str = "INLA_output_NPY") -> Dict[str, np.ndarray]:
+            Processes each image variant through an external R script pipeline, 
+            saves the results to the specified output directory, and returns the 
+            processed data as a dictionary.
+    """
     
     def __init__(self, cosmic_cfg: CosmicConfig, satellite_cfg: SatelliteConfig):
         self.cosmic_cfg = cosmic_cfg
