@@ -254,11 +254,11 @@ class FitsProcessor:
                 # 3. Call R script, passing the path text file
                 subprocess.run([
                     "Rscript",
-                    "run.R",
+                    "INLA_pipeline.R",
                 ], check=True)
                 
                 # 4. Load processed result
-                output_path = f"{output_dir}/{variant_name}.npy"
+                output_path = f"{output_dir}/{variant_name}/out.npy"
                 processed[variant_name] = np.load(output_path)
                 
                 # 5. Clean up temporary input
@@ -348,12 +348,14 @@ class PlotGenerator:
     def generate_all_plots(self,
                         output_dir: Path,
                         variants: Dict[str, np.ndarray],
+                        processed: Dict[str, np.ndarray],
                         basename: str) -> None:
         """Generate complete set of visualizations
         
         Args:
             output_dir: Base output directory
             variants: Dictionary of image variants
+            processed: Dictionary of processed variants
             basename: Stem of input filename
         """
         plot_dir = output_dir / 'plots'
@@ -363,7 +365,7 @@ class PlotGenerator:
         
         self._save_single_plots(plot_dir, variants, basename, vmin, vmax)
         self._save_comparison_plot(plot_dir, variants, basename, vmin, vmax)
-        self._save_final_comparison(plot_dir, variants, basename, vmin, vmax)
+        self._save_final_comparison(plot_dir, variants, processed,basename, vmin, vmax)
 
     def _calculate_intensity_range(self, data: np.ndarray) -> Tuple[float, float]:
         """Calculate intensity range for consistent color scaling"""
@@ -409,6 +411,7 @@ class PlotGenerator:
     def _save_final_comparison(self,
                              plot_dir: Path,
                              variants: Dict[str, np.ndarray],
+                             processed: Dict[str, np.ndarray],
                              basename: str,
                              vmin: float,
                              vmax: float) -> None:
@@ -433,7 +436,7 @@ class PlotGenerator:
             fig.colorbar(im1, ax=axs[row, 1], fraction=0.046, pad=0.04)
 
             # Processed (placeholder)
-            im2 = axs[row, 2].imshow(variants[variant], cmap=self.cmap,
+            im2 = axs[row, 2].imshow(processed[variant], cmap=self.cmap,
                                     vmin=vmin, vmax=vmax)
             if row == 0:
                 axs[row, 2].set_title("Processed")
@@ -453,11 +456,7 @@ class SimulationPipeline:
         self.plot_generator = PlotGenerator()
 
     def process_file(self, input_path: Path) -> None:
-        """Execute complete processing pipeline for a single file
-        
-        Args:
-            input_path: Path to input FITS file
-        """
+        """Execute complete processing pipeline for a single file"""
         try:
             data, header = self.file_handler.load_fits(input_path)
             basename = input_path.stem
@@ -466,16 +465,21 @@ class SimulationPipeline:
             masks = self.mask_generator.generate_all_masks(data)
             variants = self.fits_processor.create_variants(data, masks)
             self.fits_processor.save_masked_variants(data, masks)
-            #self.fits_processor.delete_masked_variants()
             processed = self.fits_processor.process_variants(variants)
 
+            # Add processed variants to the main dictionary
+            for key in processed:
+                if processed[key] is not None:
+                    variants[f"{key}_processed"] = processed[key]
+
             self.file_handler.save_outputs(output_dir, variants, masks, header)
-            self.plot_generator.generate_all_plots(output_dir, variants, basename)
+            self.plot_generator.generate_all_plots(output_dir, variants, processed, basename)
 
             print(f"✅ Successfully processed {basename}")
 
         except (ValueError, OSError, RuntimeError) as e:
             print(f"❌ Error processing {input_path.name}: {str(e)}")
+            
 
 def main() -> None:
     """Command line interface and processing coordination"""
