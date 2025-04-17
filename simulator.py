@@ -23,6 +23,11 @@ import matplotlib.pyplot as plt
 from astropy.io import fits
 from scipy.ndimage import binary_dilation
 
+from colorama import Fore, init
+init()
+colors = [Fore.WHITE, Fore.YELLOW, Fore.BLUE, Fore.MAGENTA, Fore.CYAN]
+
+
 #region Constants
 DEFAULT_COSMIC_VALUE: float = np.float32(np.nan)
 DEFAULT_SATELLITE_VALUE: float = np.float32(np.nan)
@@ -163,7 +168,7 @@ class FitsProcessor:
     """FitsProcessor is a class designed to handle the creation, processing, saving, 
     and deletion of image variants based on input data and masks. It also integrates 
     with an external R script pipeline for further processing of these variants.
-    
+
     Methods:
         - __init__(cosmic_cfg: CosmicConfig, satellite_cfg: SatelliteConfig):
             Initializes the FitsProcessor with configuration objects for cosmic 
@@ -260,8 +265,11 @@ class FitsProcessor:
         os.makedirs("variants", exist_ok=True)  # Input dir for .npy files
         os.makedirs(output_dir, exist_ok=True)   # Output dir for results
 
+        i=0
         for variant_name, data in variants.items():
             try:
+                i += 1
+                print(f"{colors[i % len(colors)]}Processing {variant_name}...\n Calling R-INLA{Fore.RESET}")
                 # 1. Save input .npy file
                 input_path = f"variants/{variant_name}.npy"
                 np.save(input_path, data)
@@ -288,7 +296,7 @@ class FitsProcessor:
                 os.remove(path_file)
                 
             except Exception as e:
-                print(f"Failed to process {variant_name}: {str(e)}")
+                print(f"Failed to process {variant_name}:\n {Fore.RED}Error: {str(e)}{Fore.RESET}")
                 processed[variant_name] = None  # Mark as failed
 
         return processed
