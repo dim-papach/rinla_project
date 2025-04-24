@@ -12,6 +12,7 @@ library(rlang)
 # Source your custom functions from R/functions.R
 source("R/functions.R")
 
+scalingg <- FALSE
 inla.setOption(num.threads = 6)
 
 # ---- Pipeline Execution ----
@@ -29,7 +30,7 @@ tryCatch({
   #image(t(raw_data)[, nrow(raw_data):1], col = heat.colors(256), main = "Corrected Orientation")
   # 3. Prepare data
   print("Prepare_data")
-  inla_variables <- prepare_data(raw_data, scaling = FALSE)
+  inla_variables <- prepare_data(raw_data, scaling = scalingg)
   
   # 4. Validate data
   print("Check_data_validity")
@@ -133,7 +134,7 @@ tryCatch({
 
   # 13. Unscale results
   print("Unscale results")
-  unscaled_results <- unscale_collected(inla_results_collected, scaling = FALSE)
+  unscaled_results <- unscale_collected(inla_results_collected, scaling = scalingg)
 
   # 13.5 Plot the image
   # image(t(unscaled_results)[, nrow(unscaled_results):1], col = heat.colors(256), main = "Corrected Orientation")
