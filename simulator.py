@@ -22,6 +22,8 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from scipy.ndimage import binary_dilation
+from plotting_fits import PlotGenerator
+import logging
 
 from colorama import Fore, init
 init()
@@ -31,7 +33,7 @@ colors = [Fore.WHITE, Fore.YELLOW, Fore.BLUE, Fore.MAGENTA, Fore.CYAN]
 #region Constants
 DEFAULT_COSMIC_VALUE: float = np.float32(np.nan)
 DEFAULT_SATELLITE_VALUE: float = np.float32(np.nan)
-CMAP: str = 'viridis
+CMAP: str = 'viridis'
 PLOT_DPI: int = 150
 PERCENTILE_RANGE: Tuple[int, int] = (1, 99)
 #endregion
@@ -239,7 +241,7 @@ class FitsProcessor:
                                data)
         }
         # Create directory if it doesn't exist
-        os.makedirs(output_dir, exist_ok=True)
+        #os.makedirs(output_dir, exist_ok=True)
 
         os.makedirs('variants', exist_ok=True)
         # Save each masked variant to disk
@@ -374,115 +376,6 @@ class FileHandler:
         for name, mask in masks.items():
             fits.writeto(mask_dir / f'{name}_mask.fits',
                        mask.astype(np.uint8), header, overwrite=True)
-
-class PlotGenerator:
-    """Handles generation of diagnostic visualizations"""
-    
-    def __init__(self, cmap: str = CMAP, dpi: int = PLOT_DPI):
-        self.cmap = cmap
-        self.dpi = dpi
-        self.percentile_range = PERCENTILE_RANGE
-
-    def generate_all_plots(self,
-                        output_dir: Path,
-                        variants: Dict[str, np.ndarray],
-                        processed: Dict[str, np.ndarray],
-                        basename: str) -> None:
-        """Generate complete set of visualizations
-        
-        Args:
-            output_dir: Base output directory
-            variants: Dictionary of image variants
-            processed: Dictionary of processed variants
-            basename: Stem of input filename
-        """
-        plot_dir = output_dir / 'plots'
-        plot_dir.mkdir(exist_ok=True)
-        
-        vmin, vmax = self._calculate_intensity_range(variants['original'])
-        
-        self._save_single_plots(plot_dir, variants, basename, vmin, vmax)
-        self._save_comparison_plot(plot_dir, variants, basename, vmin, vmax)
-        self._save_final_comparison(plot_dir, variants, processed,basename, vmin, vmax)
-
-    def _calculate_intensity_range(self, data: np.ndarray) -> Tuple[float, float]:
-        """Calculate intensity range for consistent color scaling"""
-        return np.nanpercentile(data, self.percentile_range)
-
-    def _save_single_plots(self,
-                         plot_dir: Path,
-                         variants: Dict[str, np.ndarray],
-                         basename: str,
-                         vmin: float,
-                         vmax: float) -> None:
-        """Save individual plots for each variant"""
-        for name, data in variants.items():
-            fig = plt.figure(figsize=(8, 6), dpi=self.dpi)
-            plt.imshow(data, cmap=self.cmap, origin='lower', vmin=vmin, vmax=vmax)
-            plt.colorbar(label='Intensity (ADU)')
-            plt.title(f'{name.capitalize()}\n{basename}')
-            plt.tight_layout()
-            plt.savefig(plot_dir / f'{name}.png')
-            plt.close(fig)
-
-    def _save_comparison_plot(self,
-                            plot_dir: Path,
-                            variants: Dict[str, np.ndarray],
-                            basename: str,
-                            vmin: float,
-                            vmax: float) -> None:
-        """Generate 2x2 comparison plot"""
-        fig, axs = plt.subplots(2, 2, figsize=(12, 10), dpi=self.dpi)
-        titles = ['Original', 'Cosmic Rays', 'Satellite Trails', 'Combined']
-
-        for ax, (key, title) in zip(axs.flat, zip(variants.keys(), titles)):
-            im = ax.imshow(variants[key], cmap=self.cmap, origin='lower',
-                         vmin=vmin, vmax=vmax)
-            ax.set_title(title)
-            fig.colorbar(im, ax=ax, label='Intensity (ADU)')
-
-        fig.suptitle(f"Image Comparison: {basename}")
-        plt.tight_layout()
-        plt.savefig(plot_dir / 'comparison.png')
-        plt.close(fig)
-
-    def _save_final_comparison(self,
-                             plot_dir: Path,
-                             variants: Dict[str, np.ndarray],
-                             processed: Dict[str, np.ndarray],
-                             basename: str,
-                             vmin: float,
-                             vmax: float) -> None:
-        """Generate 3x3 comparison plot showing processing stages"""
-        fig, axs = plt.subplots(3, 3, figsize=(15, 12))
-        plt.subplots_adjust(right=0.85, wspace=0.4)
-
-        for row, variant in enumerate(['cosmic', 'satellite', 'combined']):
-            # Original
-            im0 = axs[row, 0].imshow(variants['original'], cmap=self.cmap,
-                                   vmin=vmin, vmax=vmax)
-            axs[row, 0].set_ylabel(variant.capitalize())
-            if row == 0:
-                axs[row, 0].set_title("Original")
-            fig.colorbar(im0, ax=axs[row, 0], fraction=0.046, pad=0.04)
-
-            # Masked
-            im1 = axs[row, 1].imshow(variants[variant], cmap=self.cmap,
-                                    vmin=vmin, vmax=vmax)
-            if row == 0:
-                axs[row, 1].set_title("Masked")
-            fig.colorbar(im1, ax=axs[row, 1], fraction=0.046, pad=0.04)
-
-            # Processed (placeholder)
-            im2 = axs[row, 2].imshow(processed[variant], cmap=self.cmap,
-                                    vmin=vmin, vmax=vmax)
-            if row == 0:
-                axs[row, 2].set_title("Processed")
-            fig.colorbar(im2, ax=axs[row, 2], fraction=0.046, pad=0.04)
-
-        plt.tight_layout()
-        plt.savefig(plot_dir / 'final_comparison.png', bbox_inches='tight')
-        plt.close(fig)
 
 class SimulationPipeline:
     """Coordinates the complete simulation workflow"""

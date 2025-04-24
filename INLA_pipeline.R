@@ -12,7 +12,7 @@ library(rlang)
 # Source your custom functions from R/functions.R
 source("R/functions.R")
 
-scalingg <- FALSE
+scalingg <- TRUE 
 inla.setOption(num.threads = 6)
 
 # ---- Pipeline Execution ----
