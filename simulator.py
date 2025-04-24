@@ -31,7 +31,7 @@ colors = [Fore.WHITE, Fore.YELLOW, Fore.BLUE, Fore.MAGENTA, Fore.CYAN]
 #region Constants
 DEFAULT_COSMIC_VALUE: float = np.float32(np.nan)
 DEFAULT_SATELLITE_VALUE: float = np.float32(np.nan)
-CMAP: str = 'viridis'
+CMAP: str = 'viridis
 PLOT_DPI: int = 150
 PERCENTILE_RANGE: Tuple[int, int] = (1, 99)
 #endregion
@@ -624,13 +624,13 @@ def main() -> None:
 
     for file_path in input_files:
         processor.process_file(Path(file_path))
+        print("\n🎉 Processing complete! Output structure:")
+        print("output/")
+        print("└── {input_files}/")
+        print("    ├── data/")
+        print("    ├── masks/")
+        print("    └── plots/")
 
-    print("\n🎉 Processing complete! Output structure:")
-    print("output/")
-    print("└── [basename]/")
-    print("    ├── data/")
-    print("    ├── masks/")
-    print("    └── plots/")
 
 
 if __name__ == '__main__':
