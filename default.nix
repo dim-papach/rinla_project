@@ -1,11 +1,10 @@
 let
 # Importing Nixpkgs at a specific commit
- pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/eb090f7b923b1226e8beb954ce7c8da99030f4a8.tar.gz") {};
+ pkgs = import (fetchTarball "https://github.com/NixOS/nixpkgs/archive/cca4f8e59e9479ced4f02f33530be367220d5826.tar.gz") {};
 
 # List of R packages to be included
  rpkgs = builtins.attrValues {
   inherit (pkgs.rPackages) 
-    autokeras
     beepr 
     classInt 
     codetools 
@@ -37,6 +36,7 @@ let
     optparse
     parallelly
     RcppCNPy
+    quarto
     rgl 
     rlang 
     rmarkdown 
@@ -71,8 +71,7 @@ let
  
 # System packages to be included (Downloaded from the nixpkgs repo)
   system_packages = builtins.attrValues {
-  inherit (pkgs) R glibcLocales nix gnugrep glibc python311 toybox cowsay;
-};
+  inherit (pkgs) R glibcLocales nix gnugrep glibc python311 toybox cowsay pandoc openblas;};
 # Rebuild R to ensure it uses the specified GLIBC version
 R = pkgs.R.overrideAttrs (oldAttrs: {
   buildInputs = oldAttrs.buildInputs ++ [ pkgs.glibc ];
@@ -85,10 +84,10 @@ R = pkgs.R.overrideAttrs (oldAttrs: {
   # Definition for INLA package
     inla = [(pkgs.rPackages.buildRPackage {
         name = "INLA";
-        version = "23.05.30-1";
+        version = "24.12.11";
         src = pkgs.fetchzip{
-	        url = "https://inla.r-inla-download.org/R/testing/src/contrib/INLA_23.05.30-1.tar.gz";
-	        sha256 = "sha256-LvZRUidUuWzBcgarqnC8i+fWnyJbTtjWGj7yOdFVNDg=";
+	        url = "https://inla.r-inla-download.org/R/testing/src/contrib/INLA_24.05.10.tar.gz";
+	        sha256 = "sha256-v9hvncV2oAI2JtqXQdU4LaqRQ6W/d6ydFrBrB/k7nqk=";
 	        };
 }) ];
 
@@ -105,16 +104,15 @@ R = pkgs.R.overrideAttrs (oldAttrs: {
     numpy pandas matplotlib astropy radian scipy colorama
   ]);
 
-
+/* haskellPkgs = builtins.attrValues {
+  inherit (pkgs.haskellPackages) 
+  typst-symbols_0_1_7;
+};
+ */
  in
   pkgs.mkShell {
     LOCALE_ARCHIVE = if pkgs.system == "x86_64-linux" then  "${pkgs.glibcLocales}/lib/locale/locale-archive" else "";
     LANG = "en_US.UTF-8";
-    LC_ALL = "en_US.UTF-8";
-    LC_TIME = "en_US.UTF-8";
-    LC_MONETARY = "en_US.UTF-8";
-    LC_PAPER = "en_US.UTF-8";
-    LC_MEASUREMENT = "en_US.UTF-8";
 
     buildInputs = [ git_archive_pkgs rpkgs  system_packages rstudio_pkgs python_pkgs inla];
       
@@ -125,13 +123,6 @@ R = pkgs.R.overrideAttrs (oldAttrs: {
     echo "LANG is set to: $LANG"
     echo "LD_LIBRARY_PATH is: $LD_LIBRARY_PATH"
     # The rest of your existing shellHook
-
-    # Safely set LD_LIBRARY_PATH to include the R library path
-    if [ -z "$LD_LIBRARY_PATH" ]; then
-      export LD_LIBRARY_PATH=/nix/store/130rh1iwc2k0qqksgf09663sdbds5vml-R-4.3.2/lib/R/lib
-    else
-      export LD_LIBRARY_PATH=/nix/store/130rh1iwc2k0qqksgf09663sdbds5vml-R-4.3.2/lib/R/lib:$LD_LIBRARY_PATH
-    fi
 
     Rscript -e 'if (requireNamespace("INLA", quietly = TRUE))  { system("cowsay -f llama INLA is already installed.\n") } else {system("cowsay -e xx -f ghostbusters INLA is NOT installed RIP")}' 
     chmod +x ./run.R
