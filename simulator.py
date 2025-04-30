@@ -22,7 +22,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from astropy.io import fits
 from scipy.ndimage import binary_dilation
-from plotting_fits import PlotGenerator
+from fyf.plotting_fits import PlotGenerator
 import logging
 
 from colorama import Fore, init
