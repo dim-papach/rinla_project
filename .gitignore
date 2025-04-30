@@ -2,3 +2,21 @@ result
 .Rproj.user
 .Rhistory
 .Rhistory
+
+*.fits
+/roast.fits
+/O1_6300s_masked.fits
+/variants/
+/RemoteAstrophotography-com_M-31Andromeda/
+/plots/
+/output_2/
+/output/
+/O1/
+/N2/
+/input_2/
+/input/
+/INLA_output_NPY/
+/INLA_fits_output/
+/HI/
+/galaxy center/
+/eagle/
