@@ -2,6 +2,11 @@ result
 .Rproj.user
 .Rhistory
 .Rhistory
+.vscode
+
+_targets/
+__pycache__
+*.Rproj
 
 *.fits
 /roast.fits
@@ -20,5 +25,3 @@ result
 /HI/
 /galaxy center/
 /eagle/
-
-_targets/
