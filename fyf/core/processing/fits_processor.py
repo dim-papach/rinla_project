@@ -128,7 +128,7 @@ class FitsProcessor:
                 # 3. Call R script, passing the path text file
                 subprocess.run([
                     "Rscript",
-                    "INLA_pipeline.R",
+                    "fyf/r/INLA_pipeline.R",
                 ], check=True)
                 
                 # 4. Load processed result

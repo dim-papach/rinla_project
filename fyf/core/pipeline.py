@@ -106,7 +106,7 @@ class SimulationPipeline:
             self.fits_processor.save_masked_variants(data, masks)
             
             # Process with INLA
-            processed = self.fits_processor.process_variants(variants, self.inla_config)
+            processed = self.fits_processor.process_variants(variants)#self.inla_config)
             result['processed'] = processed
             
             # Add processed variants to the main dictionary
