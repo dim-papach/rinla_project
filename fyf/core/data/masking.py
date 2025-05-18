@@ -1,19 +1,22 @@
 """
-Mask generation functionality for cosmic rays and satellite trails.
+Mask generation functionality for cosmic rays and satellite trails with custom mask support.
 
 This module provides the MaskGenerator class which creates boolean masks
-for simulating cosmic rays and satellite trails in astronomical images.
+for simulating cosmic rays and satellite trails in astronomical images,
+with support for loading custom masks.
 """
 
 import numpy as np
 from scipy.ndimage import binary_dilation
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Optional, Union
+from pathlib import Path
+from astropy.io import fits
 
 from fyf.core.config import CosmicConfig, SatelliteConfig
 
 
 class MaskGenerator:
-    """Handles generation of cosmic ray and satellite trail masks
+    """Handles generation of cosmic ray and satellite trail masks with custom mask support
     
     Attributes:
         cosmic_cfg: Configuration for cosmic ray generation
@@ -32,31 +35,43 @@ class MaskGenerator:
         self.satellite_cfg = satellite_cfg
         self.rng = np.random.default_rng(cosmic_cfg.seed)  # Use a single RNG instance
 
-    def generate_all_masks(self, data: np.ndarray) -> Dict[str, np.ndarray]:
+    def generate_all_masks(self, data: np.ndarray, 
+                         custom_mask_path: Optional[Union[str, Path]] = None) -> Dict[str, np.ndarray]:
         """Generate complete set of boolean masks
         
         Args:
             data: Input image data array
+            custom_mask_path: Optional path to custom mask file
             
         Returns:
-            Dictionary containing three masks:
+            Dictionary containing masks:
             - 'cosmic': Cosmic ray affected pixels
             - 'satellite': Satellite trail pixels
-            - 'combined': Union of both mask types
+            - 'custom': Custom mask (if provided)
+            - 'combined': Union of all mask types
         """
         if data.size == 0:
+            empty_mask = np.zeros_like(data, dtype=bool)
             return {
-                'cosmic': np.zeros_like(data, dtype=bool),
-                'satellite': np.zeros_like(data, dtype=bool),
-                'combined': np.zeros_like(data, dtype=bool),
+                'cosmic': empty_mask,
+                'satellite': empty_mask,
+                'custom': empty_mask,
+                'combined': empty_mask,
             }
 
         masks = {
             'cosmic': self._generate_cosmic_mask(data),
             'satellite': self._generate_satellite_mask(data.shape),
-            'combined': None
+            'custom': self._load_custom_mask(data.shape, custom_mask_path),
         }
-        masks['combined'] = masks['cosmic'] | masks['satellite']
+        
+        # Create combined mask (union of all masks)
+        combined = masks['cosmic'] | masks['satellite']
+        if masks['custom'] is not None:
+            combined = combined | masks['custom']
+            
+        masks['combined'] = combined
+        
         return masks
 
     def _generate_cosmic_mask(self, data: np.ndarray) -> np.ndarray:
@@ -104,6 +119,59 @@ class MaskGenerator:
                                  self.satellite_cfg.trail_width))
                 )
         return mask
+    
+    def _load_custom_mask(self, 
+                        shape: Tuple[int, int], 
+                        mask_path: Optional[Union[str, Path]] = None) -> Optional[np.ndarray]:
+        """Load custom mask from file
+        
+        Args:
+            shape: Shape of the image (height, width)
+            mask_path: Path to custom mask file
+            
+        Returns:
+            Boolean mask from file or None if no path provided
+        """
+        if mask_path is None:
+            return None
+        
+        try:
+            # Convert path to Path object if it's a string
+            mask_path = Path(mask_path) if isinstance(mask_path, str) else mask_path
+            
+            # Check file extension to determine loading method
+            if mask_path.suffix.lower() in ['.fits', '.fit']:
+                # Load FITS file
+                with fits.open(mask_path) as hdul:
+                    mask_data = hdul[0].data
+            elif mask_path.suffix.lower() == '.npy':
+                # Load NumPy file
+                mask_data = np.load(mask_path)
+            else:
+                # Attempt to load as image using matplotlib
+                import matplotlib.pyplot as plt
+                import matplotlib.image as mpimg
+                mask_data = mpimg.imread(mask_path)
+                
+                # If it's an RGB image, convert to grayscale
+                if len(mask_data.shape) > 2:
+                    mask_data = np.mean(mask_data, axis=2)  # Simple grayscale conversion
+            
+            # Ensure mask is boolean
+            mask_data = mask_data > 0
+            
+            # Resize mask if necessary to match input shape
+            if mask_data.shape != shape:
+                from scipy.ndimage import zoom
+                zoom_factors = (shape[0] / mask_data.shape[0], shape[1] / mask_data.shape[1])
+                mask_data = zoom(mask_data.astype(float), zoom_factors, order=0) > 0
+            
+            return mask_data
+            
+        except Exception as e:
+            print(f"Error loading custom mask: {e}")
+            # Return empty mask in case of error
+            return np.zeros(shape, dtype=bool)
 
     def _random_trail_parameters(self, 
                                 width: int, 
