@@ -1,0 +1,118 @@
+flowchart TD
+    A["CLI Entry Point: fyf"] --> B{Choose Command}
+    
+    %% Core Commands
+    B --> C["simulate"]
+    B --> D["process"] 
+    B --> F["validate"]
+    B --> G["plot"]
+    B --> H["config"]
+    
+    %% Configuration System
+    H --> H1["config generate"]
+    H --> H2["config validate"]
+    H1 --> CONFIG1[("fyf-config.json
+    Generated template")]
+    H2 --> CONFIG2["Validate existing config"]
+    
+    %% Simulate Command with Config Support
+    C --> SC{Input Source}
+    SC --> SC1["CLI Flags (--cosmic-fraction, --trails)"]
+    SC --> SC2["JSON Config (--config config.json)"]
+    SC --> SC3["Mixed (flags override config)"]
+    SC1 --> SM["Masking Operations"]
+    SC2 --> SM
+    SC3 --> SM
+    SM --> SM1["Apply Cosmic Rays"]
+    SM --> SM2["Apply Satellite Trails"]
+    SM --> SM3["Load Custom Mask"]
+    SM1 --> M1[("Masked FITS files")]
+    SM2 --> M1
+    SM3 --> M1
+    
+    %% Process Command with Config Support
+    D --> PC{Input Source}
+    PC --> PC1["CLI Flags (--model, --shape)"]
+    PC --> PC2["JSON Config (--config config.json)"]
+    PC --> PC3["Mixed (flags override config)"]
+    PC1 --> PM["Model Processing"]
+    PC2 --> PM
+    PC3 --> PM
+    PM --> PM1["INLA Pipeline"]
+    PM --> PM2["MCMC Pipeline [Future]"]
+    PM1 --> S[("Processed Results")]
+    PM2 --> S
+    
+    %% Validate Command
+    F --> VC{Input Source}
+    VC --> VC1["CLI Flags (--metric, --plot)"]
+    VC --> VC2["JSON Config (--config config.json)"]
+    VC1 --> VM["Validation Operations"]
+    VC2 --> VM
+    VM --> VM1["Calculate SSIM"]
+    VM --> VM2["Calculate MSE/MAE"]
+    VM --> VM3["Generate Residual Stats"]
+    VM1 --> VR[("validation_results.txt")]
+    VM2 --> VR
+    VM3 --> VR
+    VM --> VM4["Generate Validation Plots (--plot)"]
+    VM4 --> VP[("validation_plots.png")]
+    
+    %% Plot Command
+    G --> GC{Input Source}
+    GC --> GC1["CLI Flags (--plot-type, --dpi, --cmap)"]
+    GC --> GC2["JSON Config (--config config.json)"]
+    GC1 --> GP["Plotting Operations"]
+    GC2 --> GP
+    GP --> GP1["Comparison Plots"]
+    GP --> GP2["Residual Plots"]
+    GP --> GP3["All Plots"]
+    GP1 --> GPR[("comparison_plots.png")]
+    GP2 --> GPR
+    GP3 --> GPR
+    
+    %% JSON Config Examples
+    JSON1["Example config.json:
+    {
+      'validate': {
+        'metrics': ['ssim', 'mse', 'mae'],
+        'generate_plots': true,
+        'output_dir': './validation'
+      },
+      'plot': {
+        'plot_type': 'all',
+        'dpi': 150,
+        'cmap': 'viridis',
+        'residual_cmap': 'RdBu',
+        'output_dir': './plots'
+      }
+    }"]
+    
+    %% Usage Examples
+    USAGE["Usage Examples:
+    
+    # Validate with config
+    fyf validate original.fits processed.fits --config pipeline.json
+    
+    # Quick validation with flags
+    fyf validate original.fits processed.fits --plot --metric ssim
+    
+    # Generate plots with config
+    fyf plot original.fits processed.fits --config pipeline.json
+    
+    # Override plot settings
+    fyf plot original.fits processed.fits --config pipeline.json --dpi 300"]
+    
+    %% Styling
+    classDef storage fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef decision fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef config fill:#e8eaf6,stroke:#3f51b5,stroke-width:2px
+    classDef example fill:#f1f8e9,stroke:#689f38,stroke-width:1px
+    classDef note fill:#e1f5fe,stroke:#0277bd,stroke-width:1px
+    classDef process fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    
+    class M1,S,CONFIG1,VR,VP,GPR storage
+    class B,SC,PC,VC,GC decision
+    class H,H1,H2,CONFIG2 config
+    class JSON1,USAGE example
+    class VM1,VM2,VM3,VM4,GP1,GP2,GP3 process
