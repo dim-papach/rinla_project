@@ -51,15 +51,24 @@ class SimulationPipeline:
         self.mask_generator = MaskGenerator(cosmic_cfg, satellite_cfg)
         self.fits_processor = FitsProcessor(cosmic_cfg, satellite_cfg)
         self.file_handler = FileHandler()
-        self.plot_generator = PlotGenerator(plot_cfg)
+        self.plot_generator = PlotGenerator() if plot_cfg is None else PlotGenerator(
+            cmap=plot_cfg.cmap,
+            dpi=plot_cfg.dpi,
+            residual_cmap=plot_cfg.residual_cmap,
+            percentile_range=plot_cfg.percentile_range,
+            residual_percentile=plot_cfg.residual_percentile
+        )
         self.inla_config = inla_cfg or INLAConfig()
 
-    def process_file(self, input_path: Path) -> Dict[str, Any]:
+    def process_file(self, 
+                    input_path: Path, 
+                    custom_mask_path: Optional[Union[str, Path]] = None) -> Dict[str, Any]:
         """
         Execute complete processing pipeline for a single file
         
         Args:
             input_path: Path to input FITS file
+            custom_mask_path: Optional path to custom mask file
             
         Returns:
             Dictionary containing:
@@ -94,8 +103,8 @@ class SimulationPipeline:
             output_dir = self.file_handler.create_output_structure(basename)
             result['output_dir'] = output_dir
             
-            # Generate masks
-            masks = self.mask_generator.generate_all_masks(data)
+            # Generate masks with optional custom mask
+            masks = self.mask_generator.generate_all_masks(data, custom_mask_path)
             result['masks'] = masks
             
             # Create variants
@@ -106,7 +115,11 @@ class SimulationPipeline:
             self.fits_processor.save_masked_variants(data, masks)
             
             # Process with INLA
-            processed = self.fits_processor.process_variants(variants)#self.inla_config)
+            if self.inla_config:
+                processed = self.fits_processor.process_variants(variants, inla_config=self.inla_config)
+            else:
+                processed = self.fits_processor.process_variants(variants)
+                
             result['processed'] = processed
             
             # Add processed variants to the main dictionary
@@ -129,10 +142,10 @@ class SimulationPipeline:
             
             result['metrics'] = metrics
             result['success'] = True
-            print(f"✅ Successfully processed {basename}")
             
         except (ValueError, OSError, RuntimeError) as e:
-            print(f"❌ Error processing {input_path.name}: {str(e)}")
+            print(f"Error processing {input_path.name}: {str(e)}")
+            result['error'] = str(e)
             
         finally:
             # Clean up
@@ -146,12 +159,16 @@ class SimulationPipeline:
         
         return result
     
-    def batch_process(self, input_paths: list) -> Dict[str, Dict[str, Any]]:
+    def batch_process(self, 
+                     input_paths: list, 
+                     custom_mask_path: Optional[Union[str, Path]] = None
+                     ) -> Dict[str, Dict[str, Any]]:
         """
         Process multiple files in batch mode
         
         Args:
             input_paths: List of paths to input FITS files
+            custom_mask_path: Optional path to custom mask file
             
         Returns:
             Dictionary of {filename: results} for each processed file
