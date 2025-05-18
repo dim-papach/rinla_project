@@ -1,0 +1,42 @@
+{
+  "simulate": {
+    "cosmic_fraction": 0.01,
+    "cosmic_value": null,
+    "cosmic_seed": null,
+    "trails": 1,
+    "trail_width": 3,
+    "min_angle": -45.0,
+    "max_angle": 45.0,
+    "trail_value": null,
+    "output_dir": "./output"
+  },
+  "process": {
+    "shape": "none",
+    "mesh_cutoff": null,
+    "tolerance": 0.0001,
+    "restart": 0,
+    "scaling": false,
+    "nonstationary": false,
+    "output_dir": "./processed"
+  },
+  "validate": {
+    "metrics": [
+      "ssim",
+      "mse",
+      "mae"
+    ],
+    "generate_plots": true,
+    "output_dir": "./validation"
+  },
+  "plot": {
+    "plot_type": "all",
+    "dpi": 150,
+    "cmap": "viridis",
+    "residual_cmap": "viridis",
+    "percentile_min": 1,
+    "percentile_max": 99,
+    "residual_percentile_min": 1,
+    "residual_percentile_max": 99,
+    "output_dir": "./plots"
+  }
+}

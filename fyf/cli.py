@@ -18,6 +18,7 @@ try:
     from fyf.core.pipeline import SimulationPipeline
     from fyf.core.validation import validate_images
     from fyf.core.visualization.report import ReportGenerator
+    from fyf.core.config_manager import ConfigManager  # New import
 except ImportError as e:
     click.echo(f"Error importing FYF modules: {e}", err=True)
     sys.exit(1)
@@ -86,26 +87,93 @@ def cli(ctx, verbose):
     if verbose:
         echo_banner(f"FYF v{VERSION}")
 
-# Simulate command
+# Config command group
+@cli.group()
+def config():
+    """Configuration management commands"""
+    pass
+
+@config.command('generate')
+@click.argument('output', type=click.Path(), default='fyf-config.json')
+@click.option('--force', is_flag=True, help='Overwrite existing file')
+def config_generate(output, force):
+    """Generate a template configuration file"""
+    echo_banner("Config Generation")
+    
+    output_path = Path(output)
+    
+    if output_path.exists() and not force:
+        echo_colored(f"File {output_path} already exists. Use --force to overwrite.", Colors.WARNING)
+        return
+    
+    ConfigManager.generate_template(output_path)
+    echo_colored(f"Configuration template generated: {output_path}", Colors.SUCCESS)
+
+@config.command('validate')
+@click.argument('config_file', type=click.Path(exists=True))
+def config_validate(config_file):
+    """Validate a configuration file"""
+    echo_banner("Config Validation")
+    
+    try:
+        config_data = ConfigManager.load_config(Path(config_file))
+        valid = ConfigManager.validate_config(config_data)
+        
+        if valid:
+            echo_colored("Configuration is valid", Colors.SUCCESS)
+        else:
+            echo_colored("Configuration has issues", Colors.WARNING)
+    except Exception as e:
+        echo_colored(f"Error validating config: {e}", Colors.ERROR)
+
+# Updated simulate command with config support
 @cli.command()
 @click.argument('files', nargs=-1, required=True, callback=validate_fits_files)
-@click.option('--cosmic-fraction', '-c', type=float, default=0.01, help='Cosmic ray fraction (0-1)')
-@click.option('--trails', '-t', type=int, default=1, help='Number of satellite trails')
-@click.option('--output-dir', '-o', type=Path, default=Path('./output'), help='Output directory')
+@click.option('--config', type=click.Path(exists=True), help='Configuration file')
+@click.option('--cosmic-fraction', '-c', type=float, help='Cosmic ray fraction (0-1)')
+@click.option('--trails', '-t', type=int, help='Number of satellite trails')
+@click.option('--output-dir', '-o', type=Path, help='Output directory')
 @click.option('--report', '-r', is_flag=True, help='Generate HTML report')
 @click.pass_context
-def simulate(ctx, files, cosmic_fraction, trails, output_dir, report):
+def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report):
     """Simulate cosmic rays and satellite trails on FITS images"""
     echo_banner("FYF Simulation")
     
-    # Create configurations using existing classes
-    cosmic_cfg = CosmicConfig(fraction=cosmic_fraction)
-    satellite_cfg = SatelliteConfig(num_trails=trails, trail_width=3)
+    # Load config if provided
+    config_data = {}
+    if config:
+        config_data = ConfigManager.load_config(Path(config))
+    
+    # Merge CLI args with config
+    cli_args = {
+        'cosmic_fraction': cosmic_fraction,
+        'trails': trails,
+        'output_dir': str(output_dir) if output_dir else None
+    }
+    
+    simulate_config = ConfigManager.merge_with_cli_args(config_data, 'simulate', cli_args)
+    
+    # Create configurations using merged values
+    cosmic_cfg = CosmicConfig(
+        fraction=simulate_config.get('cosmic_fraction', 0.01)
+    )
+    satellite_cfg = SatelliteConfig(
+        num_trails=simulate_config.get('trails', 1),
+        trail_width=simulate_config.get('trail_width', 3)
+    )
+    
+    # Set output directory
+    output_dir = Path(simulate_config.get('output_dir', './output'))
     
     # Use existing pipeline
-    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg, inla_cfg = None, plot_cfg=None)
+    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg)
     
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Display configuration
+    echo_colored(f"Cosmic rays: {cosmic_cfg.fraction*100:.1f}%", Colors.INFO)
+    echo_colored(f"Satellite trails: {satellite_cfg.num_trails}", Colors.INFO)
+    echo_colored(f"Output directory: {output_dir}", Colors.INFO)
     
     # Process files
     results = {}
@@ -134,14 +202,15 @@ def simulate(ctx, files, cosmic_fraction, trails, output_dir, report):
         except Exception as e:
             echo_colored(f"Report error: {e}", Colors.ERROR)
 
-# Process command
+# Updated process command with config support
 @cli.command()
 @click.argument('files', nargs=-1, required=True, callback=validate_fits_files)
-@click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), default='none')
+@click.option('--config', type=click.Path(exists=True), help='Configuration file')
+@click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
 @click.option('--scaling', '-s', is_flag=True, help='Enable log10 scaling')
-@click.option('--output-dir', '-o', type=Path, default=Path('./processed'), help='Output directory')
+@click.option('--output-dir', '-o', type=Path, help='Output directory')
 @click.pass_context
-def process(ctx, files, shape, scaling, output_dir):
+def process(ctx, files, config, shape, scaling, output_dir):
     """Process FITS images using R-INLA"""
     echo_banner("FYF Processing")
     
@@ -153,17 +222,42 @@ def process(ctx, files, shape, scaling, output_dir):
     except ImportError:
         pass
     
+    # Load config if provided
+    config_data = {}
+    if config:
+        config_data = ConfigManager.load_config(Path(config))
+    
+    # Merge CLI args with config
+    cli_args = {
+        'shape': shape,
+        'scaling': scaling,
+        'output_dir': str(output_dir) if output_dir else None
+    }
+    
+    process_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args)
+    
     # Create INLA configuration
-    inla_cfg = INLAConfig(shape=shape, scaling=scaling)
+    inla_cfg = INLAConfig(
+        shape=process_config.get('shape', 'none'),
+        scaling=process_config.get('scaling', False)
+    )
     plot_cfg = PlotConfig()
+    
+    # Set output directory
+    output_dir = Path(process_config.get('output_dir', './processed'))
     
     # Empty configs for simulation (we're just processing)
     cosmic_cfg = CosmicConfig(fraction=0.0)
     satellite_cfg = SatelliteConfig(num_trails=0, trail_width=1)
     
-    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg, inla_cfg = None, plot_cfg = None)
+    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg)
     
     output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Display configuration
+    echo_colored(f"INLA shape: {inla_cfg.shape}", Colors.INFO)
+    echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
+    echo_colored(f"Output directory: {output_dir}", Colors.INFO)
     
     # Process files
     with click.progressbar(files, label='Processing') as bar:
@@ -270,12 +364,33 @@ def pipeline(ctx, files, cosmic_fraction, trails, shape, scaling, output_dir, re
 @cli.command()
 @click.argument('original', type=click.Path(exists=True))
 @click.argument('processed', type=click.Path(exists=True))
-@click.option('--output-dir', '-o', type=Path, default=Path('./validation'))
+@click.option('--config', type=click.Path(exists=True), help='Configuration file')
+@click.option('--output-dir', '-o', type=Path, help='Output directory')
 @click.option('--plot', is_flag=True, help='Generate validation plots')
+@click.option('--metrics', multiple=True, type=click.Choice(['ssim', 'mse', 'mae']), help='Metrics to compute')
 @click.pass_context
-def validate(ctx, original, processed, output_dir, plot):
+def validate(ctx, original, processed, config, output_dir, plot, metrics):
     """Validate processing results by comparing original and processed images"""
     echo_banner("FYF Validation")
+    
+    # Load config if provided
+    config_data = {}
+    if config:
+        config_data = ConfigManager.load_config(Path(config))
+    
+    # Merge CLI args with config
+    cli_args = {
+        'output_dir': str(output_dir) if output_dir else None,
+        'generate_plots': plot,
+        'metrics': list(metrics) if metrics else None
+    }
+    
+    validate_config = ConfigManager.merge_with_cli_args(config_data, 'validate', cli_args)
+    
+    # Set defaults
+    output_dir = Path(validate_config.get('output_dir', './validation'))
+    generate_plots = validate_config.get('generate_plots', False)
+    selected_metrics = validate_config.get('metrics', ['ssim', 'mse', 'mae'])
     
     # Load FITS files
     try:
@@ -293,19 +408,20 @@ def validate(ctx, original, processed, output_dir, plot):
     
     # Run validation using existing function
     try:
-        metrics = validate_images(original_data, processed_data)
+        metrics_results = validate_images(original_data, processed_data)
         
         # Display results
         echo_colored("\nValidation Results:", Colors.INFO)
-        echo_colored(f"  SSIM: {metrics['ssim']:.4f}", Colors.INFO)
-        echo_colored(f"  MSE:  {metrics['mse']:.4f}", Colors.INFO)
-        echo_colored(f"  MAE:  {metrics['mae']:.4f}", Colors.INFO)
+        for metric in selected_metrics:
+            if metric in metrics_results:
+                value = metrics_results[metric]
+                echo_colored(f"  {metric.upper()}: {value:.4f}", Colors.INFO)
         
-        residual_stats = metrics['residual_stats']
+        residual_stats = metrics_results.get('residual_stats', {})
         echo_colored("\nResidual Statistics:", Colors.INFO)
-        echo_colored(f"  Mean:   {residual_stats['mean']:.2f}%", Colors.INFO)
-        echo_colored(f"  StdDev: {residual_stats['std']:.2f}%", Colors.INFO)
-        echo_colored(f"  NaN:    {residual_stats['nan_percentage']:.2f}%", Colors.INFO)
+        echo_colored(f"  Mean:   {residual_stats.get('mean', 0):.2f}%", Colors.INFO)
+        echo_colored(f"  StdDev: {residual_stats.get('std', 0):.2f}%", Colors.INFO)
+        echo_colored(f"  NaN:    {residual_stats.get('nan_percentage', 0):.2f}%", Colors.INFO)
         
         # Save results
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -316,17 +432,17 @@ def validate(ctx, original, processed, output_dir, plot):
             f.write("=====================\n\n")
             f.write(f"Original:  {original}\n")
             f.write(f"Processed: {processed}\n\n")
-            f.write(f"SSIM: {metrics['ssim']:.6f}\n")
-            f.write(f"MSE:  {metrics['mse']:.6f}\n")
-            f.write(f"MAE:  {metrics['mae']:.6f}\n\n")
-            f.write("Residual Statistics:\n")
+            for metric in selected_metrics:
+                if metric in metrics_results:
+                    f.write(f"{metric.upper()}: {metrics_results[metric]:.6f}\n")
+            f.write("\nResidual Statistics:\n")
             for key, value in residual_stats.items():
                 f.write(f"  {key}: {value:.4f}\n")
         
         echo_colored(f"\nResults saved: {result_file}", Colors.SUCCESS)
         
         # Generate plots if requested
-        if plot:
+        if generate_plots:
             from fyf.core.visualization.plotting import PlotGenerator
             
             plot_gen = PlotGenerator()
@@ -344,18 +460,43 @@ def validate(ctx, original, processed, output_dir, plot):
     except Exception as e:
         echo_colored(f"Validation error: {e}", Colors.ERROR)
 
-# Plot command
+# Updated plot command with config support
 @cli.command()
 @click.argument('original', type=click.Path(exists=True))
 @click.argument('processed', type=click.Path(exists=True))
-@click.option('--plot-type', type=click.Choice(['comparison', 'residual', 'all']), default='all')
-@click.option('--output-dir', '-o', type=Path, default=Path('./plots'))
-@click.option('--dpi', type=int, default=150, help='DPI for plots')
-@click.option('--cmap', type=str, default='viridis', help='Colormap for images')
+@click.option('--config', type=click.Path(exists=True), help='Configuration file')
+@click.option('--plot-type', type=click.Choice(['comparison', 'residual', 'all']), help='Type of plot')
+@click.option('--output-dir', '-o', type=Path, help='Output directory')
+@click.option('--dpi', type=int, help='DPI for plots')
+@click.option('--cmap', type=str, help='Colormap for images')
+@click.option('--residual-cmap', type=str, help='Colormap for residual plots')
 @click.pass_context
-def plot(ctx, original, processed, plot_type, output_dir, dpi, cmap):
+def plot(ctx, original, processed, config, plot_type, output_dir, dpi, cmap, residual_cmap):
     """Generate plots from processed data"""
     echo_banner("FYF Plot Generation")
+    
+    # Load config if provided
+    config_data = {}
+    if config:
+        config_data = ConfigManager.load_config(Path(config))
+    
+    # Merge CLI args with config
+    cli_args = {
+        'plot_type': plot_type,
+        'output_dir': str(output_dir) if output_dir else None,
+        'dpi': dpi,
+        'cmap': cmap,
+        'residual_cmap': residual_cmap
+    }
+    
+    plot_config = ConfigManager.merge_with_cli_args(config_data, 'plot', cli_args)
+    
+    # Set values from config
+    plot_type = plot_config.get('plot_type', 'all')
+    output_dir = Path(plot_config.get('output_dir', './plots'))
+    dpi = plot_config.get('dpi', 150)
+    cmap = plot_config.get('cmap', 'viridis')
+    residual_cmap = plot_config.get('residual_cmap', 'viridis')
     
     # Load FITS files
     try:
@@ -371,9 +512,20 @@ def plot(ctx, original, processed, plot_type, output_dir, dpi, cmap):
     
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    echo_colored(f"Plot type: {plot_type}", Colors.INFO)
+    echo_colored(f"DPI: {dpi}", Colors.INFO)
+    echo_colored(f"Colormap: {cmap}", Colors.INFO)
+    echo_colored(f"Output directory: {output_dir}", Colors.INFO)
+    
     try:
         # Create plot configuration
-        plot_cfg = PlotConfig(dpi=dpi, cmap=cmap)
+        plot_cfg = PlotConfig(
+            dpi=dpi,
+            cmap=cmap,
+            residual_cmap=residual_cmap,
+            percentile_range=(plot_config.get('percentile_min', 1), plot_config.get('percentile_max', 99)),
+            residual_percentile=(plot_config.get('residual_percentile_min', 1), plot_config.get('residual_percentile_max', 99))
+        )
         
         # Use existing PlotGenerator
         from fyf.core.visualization.plotting import PlotGenerator
