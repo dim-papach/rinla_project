@@ -61,8 +61,12 @@ class FitsProcessor:
         """
         variants = {
             'original': data,
-            'cosmic': np.where(masks['cosmic'], self.cosmic_cfg.value, data),
-            'satellite': np.where(masks['satellite'], self.satellite_cfg.value, data)
+            'cosmic': np.where(masks['cosmic'], 
+                            np.nan if self.cosmic_cfg.value is None else self.cosmic_cfg.value, 
+                            data),
+            'satellite': np.where(masks['satellite'], 
+                                np.nan if self.satellite_cfg.value is None else self.satellite_cfg.value, 
+                                data)
         }
         
         # Add custom variant if custom mask exists
@@ -153,6 +157,10 @@ class FitsProcessor:
         for variant_name, data in variants.items():
             try:
                 i += 1
+                print(f"Debug: Processing variant {variant_name}")
+                print(f"Debug: Data - type: {type(data)}, shape: {data.shape if data is not None else None}, dtype: {data.dtype if data is not None else None}")
+                print(f"Debug: Contains NaN?: {np.isnan(data).any() if data is not None else 'N/A'}")
+                
                 print(f"{colors[i % len(colors)]}Processing {variant_name}...\n Calling R-INLA{Fore.RESET}")
                 
                 # Skip original if it's included (often doesn't need processing)
@@ -163,12 +171,13 @@ class FitsProcessor:
                 # 1. Save input .npy file
                 input_path = f"variants/{variant_name}.npy"
                 np.save(input_path, data)
+                print(f"Debug: Saved input file {input_path}")
                 
                 # 2. Save the input path to a text file
                 path_file = f"variants/path.txt"
                 with open(path_file, "w") as f:
                     f.write(input_path)
-                
+                print(f"Debug: Saved path file {path_file}")            
                 # 3. Build R script command with INLA config
                 cmd = ["Rscript", "fyf/r/INLA_pipeline.R"]
                 
@@ -186,17 +195,27 @@ class FitsProcessor:
                         cmd.append("--scaling")
                     if inla_config.nonstationary:
                         cmd.append("--nonstationary")
-                
+                        
+                print(f"Debug: R script command: {' '.join(cmd)}")
+
                 # 4. Call R script
                 try:
                     subprocess.run(cmd, check=True)
-                    
+                    print(f"Debug: R script executed successfully")
+                    # Check if the output directory exists
+
                     # 5. Load processed result
                     output_path = f"{output_dir}/{variant_name}/out.npy"
+                    print(f"Debug: Checking for output file: {output_path}, exists: {os.path.exists(output_path)}")
+                    
                     if os.path.exists(output_path):
                         processed[variant_name] = np.load(output_path)
+                        print(f"Debug: Loaded output, shape: {processed.shape}, dtype: {processed.dtype}")
+                        print(f"Debug: Output contains NaN?: {np.isnan(processed).any()}")
                     else:
                         print(f"Warning: Output file not found at {output_path}")
+                        if os.path.exists(output_dir):
+                            print(f"Debug: Output directory contents: {os.listdir(output_dir)}")
                         processed[variant_name] = None
                         
                 except subprocess.CalledProcessError as e:
@@ -205,6 +224,8 @@ class FitsProcessor:
                 
             except Exception as e:
                 print(f"Failed to process {variant_name}:\n {Fore.RED}Error: {str(e)}{Fore.RESET}")
+                print(f"Debug: R script stdout: {e.stdout}")
+                print(f"Debug: R script stderr: {e.stderr}")
                 processed[variant_name] = None  # Mark as failed
 
             finally:

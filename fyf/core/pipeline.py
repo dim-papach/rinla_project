@@ -85,6 +85,7 @@ class SimulationPipeline:
             OSError: If file I/O fails
             RuntimeError: If processing fails
         """
+        print(f"Starting process_file for {input_path}")
         start_time = time.time()
         result = {
             'success': False,
@@ -98,28 +99,43 @@ class SimulationPipeline:
         
         try:
             # Load FITS data
+            print(f"Debug: Loading FITS file {input_path}")
+
             data, header = self.file_handler.load_fits(input_path)
+            print(f"Debug: FITS loaded, shape: {data.shape}, dtype: {data.dtype}")
             basename = input_path.stem
             output_dir = self.file_handler.create_output_structure(basename)
             result['output_dir'] = output_dir
             
             # Generate masks with optional custom mask
+            print(f"Debug: Generating masks, custom mask: {custom_mask_path}")
             masks = self.mask_generator.generate_all_masks(data, custom_mask_path)
+            print(f"Debug: Masks generated, types: {list(masks.keys())}")
             result['masks'] = masks
             
             # Create variants
+            print("Debug: Creating variants")
             variants = self.fits_processor.create_variants(data, masks)
+            print(f"Debug: Variants created, types: {list(variants.keys())}")
             result['variants'] = variants
             
             # Save masked variants for processing
+            print("Debug: Saving masked variants")
             self.fits_processor.save_masked_variants(data, masks)
             
             # Process with INLA
+            print("Debug: Processing variants with INLA")
             if self.inla_config:
                 processed = self.fits_processor.process_variants(variants, inla_config=self.inla_config)
             else:
                 processed = self.fits_processor.process_variants(variants)
-                
+            
+            print(f"Debug: Processing complete, results: {list(processed.keys())}")
+            for k, v in processed.items():
+                print(f"Debug: {k} result type: {type(v)}, none?: {v is None}")
+                if v is not None:
+                    print(f"Debug: {k} shape: {v.shape}, dtype: {v.dtype}")
+        
             result['processed'] = processed
             
             # Add processed variants to the main dictionary
