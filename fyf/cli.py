@@ -271,81 +271,101 @@ def process(ctx, files, config, shape, scaling, output_dir):
                 echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
 
 # Pipeline command
+# Pipeline command with config support
 @cli.command()
 @click.argument('files', nargs=-1, required=True, callback=validate_fits_files)
-@click.option('--cosmic-fraction', '-c', type=float, default=0.01)
-@click.option('--trails', '-t', type=int, default=1)
-@click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), default='none')
-@click.option('--scaling', '-s', is_flag=True)
-@click.option('--output-dir', '-o', type=Path, default=Path('./output'))
-@click.option('--report', '-r', is_flag=True)
-@click.option('--workers', '-w', type=int, default=1, help='Parallel workers (0=auto)')
+@click.option('--config', type=click.Path(exists=True), help='Configuration file')
+@click.option('--cosmic-fraction', '-c', type=float, help='Cosmic ray fraction (0-1)')
+@click.option('--trails', '-t', type=int, help='Number of satellite trails')
+@click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
+@click.option('--scaling', '-s', is_flag=True, help='Enable log10 scaling')
+@click.option('--output-dir', '-o', type=Path, help='Output directory')
+@click.option('--report', '-r', is_flag=True, help='Generate HTML report')
+@click.option('--custom-mask', type=click.Path(exists=True), help='Path to custom mask file')
 @click.pass_context
-def pipeline(ctx, files, cosmic_fraction, trails, shape, scaling, output_dir, report, workers):
+def pipeline(ctx, files, config, cosmic_fraction, trails, shape, scaling, output_dir, report, custom_mask):
     """Run complete pipeline: simulate artifacts and process with INLA"""
     echo_banner("FYF Complete Pipeline")
     
-    # Create all configurations
-    cosmic_cfg = CosmicConfig(fraction=cosmic_fraction)
-    satellite_cfg = SatelliteConfig(num_trails=trails, trail_width=3)
-    inla_cfg = INLAConfig(shape=shape, scaling=scaling)
+    # Load config if provided
+    config_data = {}
+    if config:
+        config_data = ConfigManager.load_config(Path(config))
+    
+    # Merge CLI args with config for simulate
+    simulate_cli_args = {
+        'cosmic_fraction': cosmic_fraction,
+        'trails': trails,
+        'custom_mask': custom_mask,
+        'output_dir': str(output_dir) if output_dir else None
+    }
+    
+    simulate_config = ConfigManager.merge_with_cli_args(config_data, 'simulate', simulate_cli_args)
+    
+    # Merge CLI args with config for process
+    process_cli_args = {
+        'shape': shape,
+        'scaling': scaling,
+        'output_dir': str(output_dir) if output_dir else None
+    }
+    
+    process_config = ConfigManager.merge_with_cli_args(config_data, 'process', process_cli_args)
+    
+    # Create configurations
+    cosmic_cfg = CosmicConfig(
+        fraction=simulate_config.get('cosmic_fraction', 0.01),
+        value=simulate_config.get('cosmic_value', None),
+        seed=simulate_config.get('cosmic_seed', None)
+    )
+    
+    satellite_cfg = SatelliteConfig(
+        num_trails=simulate_config.get('trails', 1),
+        trail_width=simulate_config.get('trail_width', 3),
+        min_angle=simulate_config.get('min_angle', -45.0),
+        max_angle=simulate_config.get('max_angle', 45.0),
+        value=simulate_config.get('trail_value', None)
+    )
+    
+    inla_cfg = INLAConfig(
+        shape=process_config.get('shape', 'none'),
+        mesh_cutoff=process_config.get('mesh_cutoff', None),
+        tolerance=process_config.get('tolerance', 1e-4),
+        restart=process_config.get('restart', 0),
+        scaling=process_config.get('scaling', False),
+        nonstationary=process_config.get('nonstationary', False)
+    )
+    
     plot_cfg = PlotConfig()
     
-    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg, inla_cfg=None, plot_cfg = None)
-    
+    # Set output directory
+    output_dir = Path(simulate_config.get('output_dir', './output'))
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Display configuration
-    echo_colored(f"Cosmic rays: {cosmic_fraction*100:.1f}%", Colors.INFO)
-    echo_colored(f"Satellite trails: {trails}", Colors.INFO)
-    echo_colored(f"INLA shape: {shape}", Colors.INFO)
+    echo_colored(f"Pipeline Configuration:", Colors.INFO)
+    echo_colored(f"  - Cosmic rays: {cosmic_cfg.fraction*100:.1f}%", Colors.INFO)
+    echo_colored(f"  - Satellite trails: {satellite_cfg.num_trails}", Colors.INFO)
+    echo_colored(f"  - INLA shape: {inla_cfg.shape}", Colors.INFO)
+    echo_colored(f"  - Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
+    echo_colored(f"  - Custom mask: {custom_mask if custom_mask else 'None'}", Colors.INFO)
+    echo_colored(f"  - Output directory: {output_dir}", Colors.INFO)
     
-    # Process files
+    # Create pipeline instance
+    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg, inla_cfg, plot_cfg)
+    
+    # Process files sequentially
     results = {}
-    if workers > 1:
-        # Parallel processing
-        import concurrent.futures
-        import multiprocessing
-        
-        if workers == 0:
-            workers = multiprocessing.cpu_count()
-        
-        echo_colored(f"Using {workers} workers", Colors.INFO)
-        
-        with concurrent.futures.ProcessPoolExecutor(max_workers=workers) as executor:
-            # Submit all tasks
-            future_to_file = {
-                executor.submit(pipeline.process_file, file_path): file_path
-                for file_path in files
-            }
-            
-            # Collect results
-            with click.progressbar(length=len(files), label='Processing') as bar:
-                for future in concurrent.futures.as_completed(future_to_file):
-                    file_path = future_to_file[future]
-                    try:
-                        result = future.result()
-                        results[file_path.name] = result
-                        status = "✓" if result['success'] else "✗"
-                        color = Colors.SUCCESS if result['success'] else Colors.ERROR
-                        echo_colored(f"{status} {file_path.name}", color)
-                    except Exception as e:
-                        echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
-                        results[file_path.name] = {'success': False, 'error': str(e)}
-                    bar.update(1)
-    else:
-        # Sequential processing
-        with click.progressbar(files, label='Processing') as bar:
-            for file_path in bar:
-                try:
-                    result = pipeline.process_file(file_path)
-                    results[file_path.name] = result
-                    status = "✓" if result['success'] else "✗"
-                    color = Colors.SUCCESS if result['success'] else Colors.ERROR
-                    echo_colored(f"{status} {file_path.name}", color)
-                except Exception as e:
-                    echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
-                    results[file_path.name] = {'success': False, 'error': str(e)}
+    with click.progressbar(files, label='Processing') as bar:
+        for file_path in bar:
+            try:
+                result = pipeline.process_file(file_path, custom_mask)
+                results[file_path.name] = result
+                status = "✓" if result['success'] else "✗"
+                color = Colors.SUCCESS if result['success'] else Colors.ERROR
+                echo_colored(f"{status} {file_path.name}", color)
+            except Exception as e:
+                echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
+                results[file_path.name] = {'success': False, 'error': str(e)}
     
     # Summary
     success_count = sum(1 for r in results.values() if r.get('success', False))
@@ -355,10 +375,11 @@ def pipeline(ctx, files, cosmic_fraction, trails, shape, scaling, output_dir, re
     if report and results:
         try:
             report_gen = ReportGenerator(output_dir)
-            report_path = report_gen.generate_summary_report("FYF Pipeline", results)
+            report_path = report_gen.generate_summary_report("FYF Pipeline Results", results)
             echo_colored(f"Report: {report_path}", Colors.SUCCESS)
         except Exception as e:
             echo_colored(f"Report error: {e}", Colors.ERROR)
+
 
 # Validate command  
 @cli.command()
