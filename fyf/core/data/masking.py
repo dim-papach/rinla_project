@@ -50,6 +50,7 @@ class MaskGenerator:
             - 'custom': Custom mask (if provided)
             - 'combined': Union of all mask types
         """
+        print("Generating masks...")
         if data.size == 0:
             empty_mask = np.zeros_like(data, dtype=bool)
             return {
@@ -58,21 +59,40 @@ class MaskGenerator:
                 'custom': empty_mask,
                 'combined': empty_mask,
             }
-
+        
         masks = {
             'cosmic': self._generate_cosmic_mask(data),
             'satellite': self._generate_satellite_mask(data.shape),
-            'custom': self._load_custom_mask(data.shape, custom_mask_path),
         }
         
-        # Create combined mask (union of all masks)
+        # Only load and add custom mask if a path was provided
+        print(f"Loading custom mask from {custom_mask_path}... if provided")
+        custom_mask = None
+        if custom_mask_path is not None:
+            custom_mask = self._load_custom_mask(data.shape, custom_mask_path)
+            print(f"Custom mask loaded with shape: {custom_mask.shape}")
+            if custom_mask is not None:
+                masks['custom'] = custom_mask
+                print(f"Custom mask shape: {custom_mask.shape}")
+        else:
+            print("Custom mask is None, using empty mask instead.")
+            
+        
+        # Create combined mask from all available masks
         combined = masks['cosmic'] | masks['satellite']
-        if masks['custom'] is not None:
-            combined = combined | masks['custom']
+        if custom_mask is not None:
+            combined = combined | custom_mask
             
         masks['combined'] = combined
+        print(f"Combined mask shape: {masks['combined'].shape}")
+        print("Mask generation complete.")
+        print(f"Cosmic mask shape: {masks['cosmic'].shape}")
+        print(f"Satellite mask shape: {masks['satellite'].shape}")
+        print(f"Custom mask shape: {masks['custom'].shape if custom_mask is not None else 'None'}")
+        print(f"Combined mask shape: {masks['combined'].shape}")
+        print("Masks generated successfully.")
         
-        return masks
+        return masks        
 
     def _generate_cosmic_mask(self, data: np.ndarray) -> np.ndarray:
         """Generate random cosmic ray mask
