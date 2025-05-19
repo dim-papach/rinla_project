@@ -64,56 +64,33 @@ class FitsProcessor:
         """
         print("Debug: Entered create_variants")
         if data.size == 0:
-            print("Debug: Data is empty, returning empty masks")
-            empty_mask = np.zeros_like(data, dtype=bool)
+            print("Debug: Data is empty, returning empty variants")
             return {
                 'original': data,
-                'cosmic': empty_mask,
-                'satellite': empty_mask,
-                'custom': empty_mask,
-                'combined': empty_mask,
+                'cosmic': None,
+                'satellite': None, 
+                'custom': None,
+                'combined': None,
             }
+        
         print("Debug: Creating variants dictionary")
-        variants = {
-            'original': data,
-            'cosmic': np.where(masks['cosmic'], 
-                            np.nan if self.cosmic_cfg.value is None else self.cosmic_cfg.value, 
-                            data),
-            'satellite': np.where(masks['satellite'], 
-                                np.nan if self.satellite_cfg.value is None else self.satellite_cfg.value, 
-                                data)
-        }
+        variants = {'original': data}
         
-        # Add custom variant if custom mask exists
-        if 'custom' in masks and masks['custom'] is not None:
-            print("Debug: Creating custom variant")
-            variants['custom'] = np.where(masks['custom'], np.nan, data)
-            print(f"Custom variant created with shape: {variants['custom'].shape}")
-        else:
-            print("Custom mask is None, using empty mask instead.")
-            variants['custom'] = np.zeros_like(data, dtype=bool)
-            print(f"Custom variant created with shape: {variants['custom'].shape}")
-        print(f"Debug: Cosmic variant shape: {variants['cosmic'].shape}")
-        print(f"Debug: Satellite variant shape: {variants['satellite'].shape}")
+        # Create each variant only if the corresponding mask has any True values
+        for mask_name in ['cosmic', 'satellite', 'custom', 'combined']:
+            if mask_name in masks and masks[mask_name] is not None:
+                if np.any(masks[mask_name]):
+                    variants[mask_name] = np.where(masks[mask_name], np.nan, data)
+                    print(f"Debug: {mask_name} mask affects {np.sum(masks[mask_name])} pixels")
+                    #print(f"Debug: {mask_name} variant created with shape: {variants[mask_name].shape}")
+                else:
+                    print(f"Debug: {mask_name} mask is empty, skipping variant")
+                    variants[mask_name] = None
+            else:
+                print(f"Debug: {mask_name} mask not found, skipping variant")
+                variants[mask_name] = None
         
-        # Create combined variant
-
-        # Create combined variant
-        print("Debug: Creating combined variant")
-        if self.cosmic_cfg.value is None and self.satellite_cfg.value is None:
-            max_val = np.nan
-        else:
-            cosmic_val = np.nan if self.cosmic_cfg.value is None else self.cosmic_cfg.value
-            satellite_val = np.nan if self.satellite_cfg.value is None else self.satellite_cfg.value
-            # Use nanmax to correctly handle NaN values
-            max_val = np.nanmax([cosmic_val, satellite_val])
-
-        variants['combined'] = np.where(masks['combined'], max_val, data)
-
-
-        print(f"Debug: Combined variant shape: {variants['combined'].shape}")
         print("Variants created successfully.")
-        
         return variants
 
     def save_masked_variants(self,
@@ -153,25 +130,22 @@ class FitsProcessor:
         print("Masked variants saved to disk.")
         
         """
-        masked_variants = {
-            'original': data,
-            'cosmic': np.where(masks['cosmic'], np.nan, data),
-            'satellite': np.where(masks['satellite'], np.nan, data),
-            # Use np.nan directly to avoid comparison issues
-            'combined': np.where(masks['combined'], np.nan, data)
-        }
+        print(f"Debug: Entered save_masked_variants, output_dir={output_dir}")
         
-        # Add custom variant if custom mask exists
-        if 'custom' in masks and masks['custom'] is not None:
-            masked_variants['custom'] = np.where(masks['custom'], np.nan, data)
-
+        # Create variants with proper NaN handling
+        masked_variants = self.create_variants(data, masks)
+        
         # Create directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
+        print(f"Debug: Output directory {output_dir} ensured")
 
-        # Save each masked variant to disk
+        # Save each masked variant to disk (skip None variants)
         for name, variant in masked_variants.items():
-            np.save(f'{output_dir}/{name}.npy', variant)
-            print(f"Debug: Saved {name}.npy to {output_dir}")
+            if variant is not None:
+                np.save(f'{output_dir}/{name}.npy', variant)
+                print(f"Debug: Saved {name}.npy to {output_dir}")
+            else:
+                print(f"Debug: Skipping {name}.npy (None variant)")
         
         print("Masked variants saved to disk.")
         
@@ -221,6 +195,22 @@ class FitsProcessor:
 
         i = 0
         for variant_name, data in variants.items():
+            # Skip original (often doesn't need processing) and None variants
+            if variant_name == 'original' and len(variants) > 1:
+                print(f"Debug: Skipping original variant (no processing needed)")
+                continue
+                
+            # Skip variants that are None or have no masked pixels (identical to original)
+            if data is None:
+                print(f"Debug: Skipping {variant_name} variant (None/empty mask)")
+                processed[variant_name] = None
+                continue
+                
+            # Skip variants that are identical to original
+            if variant_name != 'original' and np.array_equal(data, variants['original']):
+                print(f"Debug: Skipping {variant_name} variant (identical to original)")
+                processed[variant_name] = None
+                continue
             try:
                 i += 1
                 print(f"Debug: Processing variant {variant_name}")
@@ -228,11 +218,6 @@ class FitsProcessor:
                 print(f"Debug: Contains NaN?: {np.isnan(data).any() if data is not None else 'N/A'}")
                 
                 print(f"{colors[i % len(colors)]}Processing {variant_name}...\n Calling R-INLA{Fore.RESET}")
-                
-                # Skip original if it's included (often doesn't need processing)
-                if variant_name == 'original' and len(variants) > 1:
-                    print(f"Debug: Skipping original variant (no processing needed)")
-                    continue
                 
                 # 1. Save input .npy file
                 input_path = f"variants/{variant_name}.npy"
@@ -278,8 +263,11 @@ class FitsProcessor:
                     
                     if os.path.exists(output_path):
                         processed[variant_name] = np.load(output_path)
-                        print(f"Debug: Loaded output, shape: {processed[variant_name].shape}, dtype: {processed[variant_name].dtype}")
-                        print(f"Debug: Output contains NaN?: {np.isnan(processed[variant_name]).any()}")
+                        if processed[variant_name] is not None:
+                            print(f"Debug: Loaded output, shape: {processed[variant_name].shape}, dtype: {processed[variant_name].dtype}")
+                            print(f"Debug: Output contains NaN?: {np.isnan(processed[variant_name]).any()}")
+                        else:
+                            print(f"Debug: Loaded output is None")
                     else:
                         print(f"Warning: Output file not found at {output_path}")
                         if os.path.exists(output_dir):
