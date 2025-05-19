@@ -18,6 +18,7 @@ colors = [Fore.WHITE, Fore.YELLOW, Fore.BLUE, Fore.MAGENTA, Fore.CYAN]
 
 from fyf.core.config import CosmicConfig, SatelliteConfig, INLAConfig
 
+print("Debug: fits_processor.py module loaded")
 
 class FitsProcessor:
     """
@@ -39,8 +40,10 @@ class FitsProcessor:
             cosmic_cfg: Configuration for cosmic ray generation
             satellite_cfg: Configuration for satellite trail generation
         """
+        print("Debug: Initializing FitsProcessor")
         self.cosmic_cfg = cosmic_cfg
         self.satellite_cfg = satellite_cfg
+        print("Debug: FitsProcessor initialized with configs")
 
     def create_variants(self, 
                        data: np.ndarray, 
@@ -59,6 +62,18 @@ class FitsProcessor:
             - 'custom': Data with custom mask applied (if provided)
             - 'combined': Data with all artifacts applied
         """
+        print("Debug: Entered create_variants")
+        if data.size == 0:
+            print("Debug: Data is empty, returning empty masks")
+            empty_mask = np.zeros_like(data, dtype=bool)
+            return {
+                'original': data,
+                'cosmic': empty_mask,
+                'satellite': empty_mask,
+                'custom': empty_mask,
+                'combined': empty_mask,
+            }
+        print("Debug: Creating variants dictionary")
         variants = {
             'original': data,
             'cosmic': np.where(masks['cosmic'], 
@@ -71,12 +86,24 @@ class FitsProcessor:
         
         # Add custom variant if custom mask exists
         if 'custom' in masks and masks['custom'] is not None:
+            print("Debug: Creating custom variant")
             variants['custom'] = np.where(masks['custom'], np.nan, data)
+            print(f"Custom variant created with shape: {variants['custom'].shape}")
+        else:
+            print("Custom mask is None, using empty mask instead.")
+            variants['custom'] = np.zeros_like(data, dtype=bool)
+            print(f"Custom variant created with shape: {variants['custom'].shape}")
+        print(f"Debug: Cosmic variant shape: {variants['cosmic'].shape}")
+        print(f"Debug: Satellite variant shape: {variants['satellite'].shape}")
         
         # Create combined variant
+        print("Debug: Creating combined variant")
         variants['combined'] = np.where(masks['combined'], 
                                       np.maximum(self.cosmic_cfg.value, self.satellite_cfg.value),
                                       data)
+        
+        print(f"Debug: Combined variant shape: {variants['combined'].shape}")
+        print("Variants created successfully.")
         
         return variants
 
@@ -91,6 +118,7 @@ class FitsProcessor:
             masks: Dictionary of boolean masks
             output_dir: Directory to save variants (default: 'variants')
         """
+        print(f"Debug: Entered save_masked_variants, output_dir={output_dir}")
         masked_variants = {
             'original': data,
             'cosmic': np.where(masks['cosmic'], self.cosmic_cfg.value, data),
@@ -102,15 +130,17 @@ class FitsProcessor:
         
         # Add custom variant if custom mask exists
         if 'custom' in masks and masks['custom'] is not None:
+            print("Debug: Adding custom masked variant")
             masked_variants['custom'] = np.where(masks['custom'], np.nan, data)
 
         # Create directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
-        
+        print(f"Debug: Output directory {output_dir} ensured")
+
         # Save each masked variant to disk
         for name, variant in masked_variants.items():
             np.save(f'{output_dir}/{name}.npy', variant)
-            print(f"Saved {name}.npy")
+            print(f"Debug: Saved {name}.npy to {output_dir}")
         
         print("Masked variants saved to disk.")
         
@@ -120,6 +150,7 @@ class FitsProcessor:
         Args:
             output_dir: Directory containing variants (default: 'variants')
         """
+        print(f"Debug: Entered delete_masked_variants, output_dir={output_dir}")
         variant_names = ['original', 'cosmic', 'satellite', 'combined', 'custom']
         
         for name in variant_names:
@@ -127,11 +158,13 @@ class FitsProcessor:
             if os.path.exists(variant_path):
                 try:
                     os.remove(variant_path)
-                    print(f"Deleted {name}.npy")
+                    print(f"Debug: Deleted {name}.npy from {output_dir}")
                 except FileNotFoundError:
-                    print(f"{name}.npy not found, skipping deletion.")
+                    print(f"Debug: {name}.npy not found, skipping deletion.")
                 except Exception as e:
-                    print(f"Error deleting {name}.npy: {e}")
+                    print(f"Debug: Error deleting {name}.npy: {e}")
+            else:
+                print(f"Debug: {name}.npy does not exist in {output_dir}")
         
         print("Masked variants deleted from disk.")
     
@@ -149,6 +182,7 @@ class FitsProcessor:
         Returns:
             Dictionary of processed arrays with same keys as input
         """
+        print(f"Debug: Entered process_variants, output_dir={output_dir}")
         processed = {}
         os.makedirs("variants", exist_ok=True)  # Input dir for .npy files
         os.makedirs(output_dir, exist_ok=True)   # Output dir for results
@@ -165,7 +199,7 @@ class FitsProcessor:
                 
                 # Skip original if it's included (often doesn't need processing)
                 if variant_name == 'original' and len(variants) > 1:
-                    print(f"Skipping original variant (no processing needed)")
+                    print(f"Debug: Skipping original variant (no processing needed)")
                     continue
                 
                 # 1. Save input .npy file
@@ -183,6 +217,7 @@ class FitsProcessor:
                 
                 # Add INLA configuration parameters if provided
                 if inla_config:
+                    print("Debug: Adding INLA config to command")
                     if inla_config.shape != "none":
                         cmd.extend(["--shape", inla_config.shape])
                     if inla_config.mesh_cutoff is not None:
@@ -200,6 +235,7 @@ class FitsProcessor:
 
                 # 4. Call R script
                 try:
+                    print("Debug: Running R script subprocess")
                     subprocess.run(cmd, check=True)
                     print(f"Debug: R script executed successfully")
                     # Check if the output directory exists
@@ -210,8 +246,8 @@ class FitsProcessor:
                     
                     if os.path.exists(output_path):
                         processed[variant_name] = np.load(output_path)
-                        print(f"Debug: Loaded output, shape: {processed.shape}, dtype: {processed.dtype}")
-                        print(f"Debug: Output contains NaN?: {np.isnan(processed).any()}")
+                        print(f"Debug: Loaded output, shape: {processed[variant_name].shape}, dtype: {processed[variant_name].dtype}")
+                        print(f"Debug: Output contains NaN?: {np.isnan(processed[variant_name]).any()}")
                     else:
                         print(f"Warning: Output file not found at {output_path}")
                         if os.path.exists(output_dir):
@@ -224,15 +260,20 @@ class FitsProcessor:
                 
             except Exception as e:
                 print(f"Failed to process {variant_name}:\n {Fore.RED}Error: {str(e)}{Fore.RESET}")
-                print(f"Debug: R script stdout: {e.stdout}")
-                print(f"Debug: R script stderr: {e.stderr}")
+                if hasattr(e, 'stdout'):
+                    print(f"Debug: R script stdout: {e.stdout}")
+                if hasattr(e, 'stderr'):
+                    print(f"Debug: R script stderr: {e.stderr}")
                 processed[variant_name] = None  # Mark as failed
 
             finally:
                 # 6. Ensure temporary files are removed
-                if os.path.exists(input_path):
+                if 'input_path' in locals() and os.path.exists(input_path):
+                    print(f"Debug: Removing temporary input file {input_path}")
                     os.remove(input_path)
-                if os.path.exists(path_file):
+                if 'path_file' in locals() and os.path.exists(path_file):
+                    print(f"Debug: Removing temporary path file {path_file}")
                     os.remove(path_file)
 
+        print("Debug: Finished processing all variants")
         return processed

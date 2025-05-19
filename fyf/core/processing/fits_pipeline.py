@@ -14,6 +14,17 @@ def process_fits_pipeline(output_dir: Path):
     plot_generator = PlotGenerator()
     
     # Iterate through all subdirectories in the output directory
+    print(f"Processing files in {output_dir}...")
+    if not output_dir.exists():
+        print(f"Output directory {output_dir} does not exist.")
+        return
+    if not output_dir.is_dir():
+        print(f"Output path {output_dir} is not a directory.")
+        return
+    if not any(output_dir.iterdir()):
+        print(f"No subdirectories found in {output_dir}.")
+        return
+
     for subdir in output_dir.iterdir():
         data_dir = subdir / "data"
              
