@@ -6,6 +6,9 @@ A command-line tool for processing astronomical FITS images using R-INLA.
 """
 
 import sys
+import os
+import subprocess
+import time
 from pathlib import Path
 import click
 import numpy as np
@@ -15,10 +18,13 @@ init(autoreset=True)
 # Import existing FYF components
 try:
     from fyf.core.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
-    from fyf.core.pipeline import SimulationPipeline
+    from fyf.core.data.masking import MaskGenerator
+    from fyf.core.processing.fits_processor import FitsProcessor
+    from fyf.core.data.file_handler import FileHandler
     from fyf.core.validation import validate_images
+    from fyf.core.visualization.plotting import PlotGenerator
     from fyf.core.visualization.report import ReportGenerator
-    from fyf.core.config_manager import ConfigManager  # New import
+    from fyf.core.config_manager import ConfigManager
 except ImportError as e:
     click.echo(f"Error importing FYF modules: {e}", err=True)
     sys.exit(1)
@@ -134,8 +140,9 @@ def config_validate(config_file):
 @click.option('--trails', '-t', type=int, help='Number of satellite trails')
 @click.option('--output-dir', '-o', type=Path, help='Output directory')
 @click.option('--report', '-r', is_flag=True, help='Generate HTML report')
+@click.option('--custom-mask', type=click.Path(exists=True), help='Path to custom mask file')
 @click.pass_context
-def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report):
+def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, custom_mask):
     """Simulate cosmic rays and satellite trails on FITS images"""
     echo_banner("FYF Simulation")
     
@@ -165,8 +172,10 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report):
     # Set output directory
     output_dir = Path(simulate_config.get('output_dir', './output'))
     
-    # Use existing pipeline
-    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg)
+    # Initialize components
+    file_handler = FileHandler()
+    mask_generator = MaskGenerator(cosmic_cfg, satellite_cfg)
+    fits_processor = FitsProcessor(cosmic_cfg, satellite_cfg)
     
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -180,11 +189,33 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report):
     with click.progressbar(files, label='Processing') as bar:
         for file_path in bar:
             try:
-                result = pipeline.process_file(file_path)
+                start_time = time.time()
+                
+                # Load FITS data
+                data, header = file_handler.load_fits(file_path)
+                basename = file_path.stem
+                file_output_dir = output_dir / basename
+                file_output_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Generate masks with optional custom mask
+                masks = mask_generator.generate_all_masks(data, custom_mask)
+                
+                # Create variants
+                variants = fits_processor.create_variants(data, masks)
+                
+                # Save outputs
+                file_handler.save_outputs(file_output_dir, variants, masks, header)
+                
+                process_time = time.time() - start_time
+                result = {
+                    'success': True,
+                    'output_dir': str(file_output_dir),
+                    'process_time': process_time
+                }
+                
                 results[file_path.name] = result
-                status = "✓" if result['success'] else "✗"
-                color = Colors.SUCCESS if result['success'] else Colors.ERROR
-                echo_colored(f"{status} {file_path.name}", color)
+                echo_colored(f"✓ {file_path.name}", Colors.SUCCESS)
+                
             except Exception as e:
                 echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
                 results[file_path.name] = {'success': False, 'error': str(e)}
@@ -202,7 +233,6 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report):
         except Exception as e:
             echo_colored(f"Report error: {e}", Colors.ERROR)
 
-# Updated process command with config support
 @cli.command()
 @click.argument('files', nargs=-1, required=True, callback=validate_fits_files)
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
@@ -211,7 +241,7 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report):
 @click.option('--output-dir', '-o', type=Path, help='Output directory')
 @click.pass_context
 def process(ctx, files, config, shape, scaling, output_dir):
-    """Process FITS images using R-INLA"""
+    """Process FITS images with INLA to fill missing data (NaN values)"""
     echo_banner("FYF Processing")
     
     # Check if R-INLA is available
@@ -241,16 +271,15 @@ def process(ctx, files, config, shape, scaling, output_dir):
         shape=process_config.get('shape', 'none'),
         scaling=process_config.get('scaling', False)
     )
-    plot_cfg = PlotConfig()
     
     # Set output directory
     output_dir = Path(process_config.get('output_dir', './processed'))
     
-    # Empty configs for simulation (we're just processing)
-    cosmic_cfg = CosmicConfig(fraction=0.0)
-    satellite_cfg = SatelliteConfig(num_trails=0, trail_width=1)
+    # Initialize components
+    file_handler = FileHandler()
     
-    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg)
+    # Create temp directory for processing
+    os.makedirs("variants", exist_ok=True)
     
     output_dir.mkdir(parents=True, exist_ok=True)
     
@@ -263,124 +292,84 @@ def process(ctx, files, config, shape, scaling, output_dir):
     with click.progressbar(files, label='Processing') as bar:
         for file_path in bar:
             try:
-                result = pipeline.process_file(file_path)
-                status = "✓" if result['success'] else "✗"
-                color = Colors.SUCCESS if result['success'] else Colors.ERROR
-                echo_colored(f"{status} {file_path.name}", color)
+                # Load FITS data
+                data, header = file_handler.load_fits(file_path)
+                basename = file_path.stem
+                file_output_dir = output_dir / basename
+                file_output_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Save data as NPY file in variants directory
+                input_path = f"variants/{basename}.npy"
+                np.save(input_path, data)
+                
+                # Save path to NPY file in path.txt
+                path_file = f"variants/path.txt"
+                with open(path_file, "w") as f:
+                    f.write(input_path)
+                
+                # Build command with INLA config params
+                cmd = ["Rscript", "fyf/r/INLA_pipeline.R"]
+                
+                # Add INLA configuration parameters
+                if inla_cfg.shape != "none":
+                    cmd.extend(["--shape", inla_cfg.shape])
+                if inla_cfg.mesh_cutoff is not None:
+                    cmd.extend(["--mesh-cutoff", str(inla_cfg.mesh_cutoff)])
+                if inla_cfg.tolerance != 1e-4:
+                    cmd.extend(["--tolerance", str(inla_cfg.tolerance)])
+                if inla_cfg.restart != 0:
+                    cmd.extend(["--restart", str(inla_cfg.restart)])
+                if inla_cfg.scaling:
+                    cmd.append("--scaling")
+                if inla_cfg.nonstationary:
+                    cmd.append("--nonstationary")
+                
+                # Run R script
+                subprocess.run(cmd, check=True)
+                
+                # Look for output in standard output location
+                output_path = f"INLA_output_NPY/{basename}/out.npy"
+                if os.path.exists(output_path):
+                    # Load processed result
+                    processed_data = np.load(output_path)
+                    
+                    # Save as FITS file
+                    from astropy.io import fits
+                    fits.writeto(
+                        file_output_dir / 'processed.fits', 
+                        processed_data, 
+                        header, 
+                        overwrite=True
+                    )
+                    
+                    # Also save standard deviation if available
+                    uncertainty_path = f"INLA_output_NPY/{basename}/outsd.npy"
+                    if os.path.exists(uncertainty_path):
+                        uncertainty_data = np.load(uncertainty_path)
+                        fits.writeto(
+                            file_output_dir / 'uncertainty.fits', 
+                            uncertainty_data, 
+                            header, 
+                            overwrite=True
+                        )
+                    
+                    echo_colored(f"✓ {file_path.name}", Colors.SUCCESS)
+                else:
+                    echo_colored(f"✗ {file_path.name}: Output not found at {output_path}", Colors.ERROR)
+                    
             except Exception as e:
                 echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
-
-# Pipeline command
-# Pipeline command with config support
-@cli.command()
-@click.argument('files', nargs=-1, required=True, callback=validate_fits_files)
-@click.option('--config', type=click.Path(exists=True), help='Configuration file')
-@click.option('--cosmic-fraction', '-c', type=float, help='Cosmic ray fraction (0-1)')
-@click.option('--trails', '-t', type=int, help='Number of satellite trails')
-@click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
-@click.option('--scaling', '-s', is_flag=True, help='Enable log10 scaling')
-@click.option('--output-dir', '-o', type=Path, help='Output directory')
-@click.option('--report', '-r', is_flag=True, help='Generate HTML report')
-@click.option('--custom-mask', type=click.Path(exists=True), help='Path to custom mask file')
-@click.pass_context
-def pipeline(ctx, files, config, cosmic_fraction, trails, shape, scaling, output_dir, report, custom_mask):
-    """Run complete pipeline: simulate artifacts and process with INLA"""
-    echo_banner("FYF Complete Pipeline")
-    
-    # Load config if provided
-    config_data = {}
-    if config:
-        config_data = ConfigManager.load_config(Path(config))
-    
-    # Merge CLI args with config for simulate
-    simulate_cli_args = {
-        'cosmic_fraction': cosmic_fraction,
-        'trails': trails,
-        'custom_mask': custom_mask,
-        'output_dir': str(output_dir) if output_dir else None
-    }
-    
-    simulate_config = ConfigManager.merge_with_cli_args(config_data, 'simulate', simulate_cli_args)
-    
-    # Merge CLI args with config for process
-    process_cli_args = {
-        'shape': shape,
-        'scaling': scaling,
-        'output_dir': str(output_dir) if output_dir else None
-    }
-    
-    process_config = ConfigManager.merge_with_cli_args(config_data, 'process', process_cli_args)
-    
-    # Create configurations
-    cosmic_cfg = CosmicConfig(
-        fraction=simulate_config.get('cosmic_fraction', 0.01),
-        value=simulate_config.get('cosmic_value', None),
-        seed=simulate_config.get('cosmic_seed', None)
-    )
-    
-    satellite_cfg = SatelliteConfig(
-        num_trails=simulate_config.get('trails', 1),
-        trail_width=simulate_config.get('trail_width', 3),
-        min_angle=simulate_config.get('min_angle', -45.0),
-        max_angle=simulate_config.get('max_angle', 45.0),
-        value=simulate_config.get('trail_value', None)
-    )
-    
-    inla_cfg = INLAConfig(
-        shape=process_config.get('shape', 'none'),
-        mesh_cutoff=process_config.get('mesh_cutoff', None),
-        tolerance=process_config.get('tolerance', 1e-4),
-        restart=process_config.get('restart', 0),
-        scaling=process_config.get('scaling', False),
-        nonstationary=process_config.get('nonstationary', False)
-    )
-    
-    plot_cfg = PlotConfig()
-    
-    # Set output directory
-    output_dir = Path(simulate_config.get('output_dir', './output'))
-    output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Display configuration
-    echo_colored(f"Pipeline Configuration:", Colors.INFO)
-    echo_colored(f"  - Cosmic rays: {cosmic_cfg.fraction*100:.1f}%", Colors.INFO)
-    echo_colored(f"  - Satellite trails: {satellite_cfg.num_trails}", Colors.INFO)
-    echo_colored(f"  - INLA shape: {inla_cfg.shape}", Colors.INFO)
-    echo_colored(f"  - Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
-    echo_colored(f"  - Custom mask: {custom_mask if custom_mask else 'None'}", Colors.INFO)
-    echo_colored(f"  - Output directory: {output_dir}", Colors.INFO)
-    
-    # Create pipeline instance
-    pipeline = SimulationPipeline(cosmic_cfg, satellite_cfg, inla_cfg, plot_cfg)
-    
-    # Process files sequentially
-    results = {}
-    with click.progressbar(files, label='Processing') as bar:
-        for file_path in bar:
-            try:
-                result = pipeline.process_file(file_path, custom_mask)
-                results[file_path.name] = result
-                status = "✓" if result['success'] else "✗"
-                color = Colors.SUCCESS if result['success'] else Colors.ERROR
-                echo_colored(f"{status} {file_path.name}", color)
-            except Exception as e:
-                echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
-                results[file_path.name] = {'success': False, 'error': str(e)}
-    
-    # Summary
-    success_count = sum(1 for r in results.values() if r.get('success', False))
-    echo_colored(f"\nCompleted: {success_count}/{len(files)} files", Colors.INFO)
-    
-    # Generate report if requested
-    if report and results:
-        try:
-            report_gen = ReportGenerator(output_dir)
-            report_path = report_gen.generate_summary_report("FYF Pipeline Results", results)
-            echo_colored(f"Report: {report_path}", Colors.SUCCESS)
-        except Exception as e:
-            echo_colored(f"Report error: {e}", Colors.ERROR)
-
-
+            finally:
+                # Clean up temporary files
+                try:
+                    if 'input_path' in locals() and os.path.exists(input_path):
+                        os.remove(input_path)
+                    if 'path_file' in locals() and os.path.exists(path_file):
+                        os.remove(path_file)
+                except Exception as cleanup_e:
+                    echo_colored(f"Warning: Cleanup failed: {cleanup_e}", Colors.WARNING)
+                    
+                    
 # Validate command  
 @cli.command()
 @click.argument('original', type=click.Path(exists=True))
@@ -632,25 +621,28 @@ def examples():
         "Process with INLA:",
         "  fyf process masked_image.fits --shape radius --scaling",
         "",
-        "Complete pipeline:",
-        "  fyf pipeline data/*.fits -c 0.01 -t 2 --shape ellipse",
-        "",
-        "Parallel processing:",
-        "  fyf pipeline *.fits --workers 4 --report",
+        "Manual workflow (replaces pipeline):",
+        "  # Step 1: Simulate artifacts",
+        "  fyf simulate data.fits -c 0.01 -t 2 -o ./artifacts/",
+        "  # Step 2: Process with INLA",
+        "  fyf process ./artifacts/data/combined.fits --shape ellipse -o ./processed/",
+        "  # Step 3: Validate results",
+        "  fyf validate data.fits ./processed/data/original_processed.fits --plot",
+        "  # Step 4: Generate detailed plots",
+        "  fyf plot data.fits ./processed/data/original_processed.fits --plot-type all",
         "",
         "Validate results:",
         "  fyf validate original.fits processed.fits --plot",
         "",
         "Generate plots:",
-        "  fyf plot original.fits processed.fits --plot-type residual",
-        "",
-        "Batch processing with reports:",
-        "  fyf pipeline data/ --output-dir results --report"
+        "  fyf plot original.fits processed.fits --plot-type residual"
     ]
     
     for line in examples:
         if line.startswith("  fyf"):
             echo_colored(line, f"{Colors.BOLD}{Fore.WHITE}")
+        elif line.startswith("  #"):
+            echo_colored(line, Colors.WARNING)
         else:
             echo_colored(line, Colors.INFO)
 
@@ -674,7 +666,11 @@ def help(ctx, command):
 # Main entry point
 def main():
     """Main CLI entry point"""
-    cli()
+    try:
+        cli()
+    except Exception as e:
+        echo_colored(f"Error: {e}", Colors.ERROR)
+        sys.exit(1)
 
 if __name__ == '__main__':
     main()
