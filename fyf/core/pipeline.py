@@ -166,10 +166,22 @@ class SimulationPipeline:
             print(f"Debug: Outputs saved to {output_dir}")
             
             # Generate plots
+            # When generating plots
             if self.plot_generator is not None:
                 print(f"Debug: Generating plots for {basename}")
+                # Filter out None variants before plotting
+                filtered_variants = {k: v for k, v in variants.items() if v is not None}
+                filtered_processed = {k: v for k, v in processed.items() if v is not None}
+                
+                if filtered_variants and filtered_processed:
+                    self.plot_generator.generate_all_plots(output_dir, filtered_variants, filtered_processed, basename)
+                    print(f"Debug: Plots generated for {basename}")
+                else:
+                    print(f"Debug: Skipping plot generation (no valid variants/processed data)")
+            '''if self.plot_generator is not None:
+                print(f"Debug: Generating plots for {basename}")
                 self.plot_generator.generate_all_plots(output_dir, variants, processed, basename)
-                print(f"Debug: Plots generated for {basename}")
+                print(f"Debug: Plots generated for {basename}")'''
             
             # Validate results
             print("Debug: Validating processed images")
