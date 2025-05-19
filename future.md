@@ -1,0 +1,23 @@
+- [] make sure I can add more mask methods
+- [] add more processing methods
+- [] check best practices for using the library
+  - [] Check the DRY principle (Don't Repeat Yourself)
+  - [] Check the KISS principle (Keep It Simple, Stupid)
+  - [] Check the YAGNI principle (You Aren't Gonna Need It)
+  - [] Check the SOLID principles
+    - [] Single Responsibility Principle (SRP)
+    - [] Open/Closed Principle (OCP)
+    - [] Liskov Substitution Principle (LSP)
+    - [] Interface Segregation Principle (ISP)
+    - [] Dependency Inversion Principle (DIP)
+  - [] Add type hints
+  - [] Add type checking
+  - [] Add type annotations
+  - [] Add DUNDER methods
+  - [] Add docstrings
+  - [] Add comments
+  - [] Add tests
+  - [] Add examples
+  - [] Add usage instructions
+  - [] Add a README
+  - [] Add a LICENSE

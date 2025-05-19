@@ -97,11 +97,20 @@ class FitsProcessor:
         print(f"Debug: Satellite variant shape: {variants['satellite'].shape}")
         
         # Create combined variant
+
+        # Create combined variant
         print("Debug: Creating combined variant")
-        variants['combined'] = np.where(masks['combined'], 
-                                      np.maximum(self.cosmic_cfg.value, self.satellite_cfg.value),
-                                      data)
-        
+        if self.cosmic_cfg.value is None and self.satellite_cfg.value is None:
+            max_val = np.nan
+        else:
+            cosmic_val = np.nan if self.cosmic_cfg.value is None else self.cosmic_cfg.value
+            satellite_val = np.nan if self.satellite_cfg.value is None else self.satellite_cfg.value
+            # Use nanmax to correctly handle NaN values
+            max_val = np.nanmax([cosmic_val, satellite_val])
+
+        variants['combined'] = np.where(masks['combined'], max_val, data)
+
+
         print(f"Debug: Combined variant shape: {variants['combined'].shape}")
         print("Variants created successfully.")
         
@@ -117,7 +126,6 @@ class FitsProcessor:
             data: Original image data
             masks: Dictionary of boolean masks
             output_dir: Directory to save variants (default: 'variants')
-        """
         print(f"Debug: Entered save_masked_variants, output_dir={output_dir}")
         masked_variants = {
             'original': data,
@@ -143,6 +151,30 @@ class FitsProcessor:
             print(f"Debug: Saved {name}.npy to {output_dir}")
         
         print("Masked variants saved to disk.")
+        
+        """
+        masked_variants = {
+            'original': data,
+            'cosmic': np.where(masks['cosmic'], np.nan, data),
+            'satellite': np.where(masks['satellite'], np.nan, data),
+            # Use np.nan directly to avoid comparison issues
+            'combined': np.where(masks['combined'], np.nan, data)
+        }
+        
+        # Add custom variant if custom mask exists
+        if 'custom' in masks and masks['custom'] is not None:
+            masked_variants['custom'] = np.where(masks['custom'], np.nan, data)
+
+        # Create directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+
+        # Save each masked variant to disk
+        for name, variant in masked_variants.items():
+            np.save(f'{output_dir}/{name}.npy', variant)
+            print(f"Debug: Saved {name}.npy to {output_dir}")
+        
+        print("Masked variants saved to disk.")
+        
         
     def delete_masked_variants(self, output_dir: str = 'variants') -> None:
         """Delete masked variants from disk
