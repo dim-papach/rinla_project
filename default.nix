@@ -101,7 +101,7 @@ R = pkgs.R.overrideAttrs (oldAttrs: {
 
   # Python packages to be included
   python_pkgs = python311.withPackages (ps: with ps; [
-    numpy pandas matplotlib astropy radian scipy scikit-image scikit-learn colorama click 
+    numpy pandas matplotlib astropy radian scipy scikit-image scikit-learn colorama click pip
   ]);
 
 /* haskellPkgs = builtins.attrValues {
