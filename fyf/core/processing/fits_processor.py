@@ -17,6 +17,11 @@ init()
 colors = [Fore.WHITE, Fore.YELLOW, Fore.BLUE, Fore.MAGENTA, Fore.CYAN]
 
 from fyf.core.config import CosmicConfig, SatelliteConfig, INLAConfig
+from fyf.core.paths import (
+    VARIANTS_DIR, get_variant_path, get_path_file, 
+    get_inla_script_path, get_output_dir
+)
+
 
 print("Debug: fits_processor.py module loaded")
 
@@ -96,88 +101,85 @@ class FitsProcessor:
     def save_masked_variants(self,
                             data: np.ndarray,
                             masks: Dict[str, np.ndarray],
-                            output_dir: str = 'variants') -> None:
+                            output_dir: str = None) -> None:
         """Save masked variants to disk
         
         Args:
             data: Original image data
             masks: Dictionary of boolean masks
-            output_dir: Directory to save variants (default: 'variants')
-        print(f"Debug: Entered save_masked_variants, output_dir={output_dir}")
+            output_dir: Directory to save variants (default: uses VARIANTS_DIR)
+        """
+        # Use the configured variants directory if none specified
+        if output_dir is None:
+            output_dir = VARIANTS_DIR
+            
+        print(f"Debug: Saving masked variants to {output_dir}")
+        
+        # Create the masked variants
         masked_variants = {
             'original': data,
             'cosmic': np.where(masks['cosmic'], self.cosmic_cfg.value, data),
             'satellite': np.where(masks['satellite'], self.satellite_cfg.value, data),
             'combined': np.where(masks['combined'],
-                               np.maximum(self.cosmic_cfg.value, self.satellite_cfg.value),
-                               data)
+                            np.maximum(self.cosmic_cfg.value, self.satellite_cfg.value),
+                            data)
         }
         
         # Add custom variant if custom mask exists
         if 'custom' in masks and masks['custom'] is not None:
-            print("Debug: Adding custom masked variant")
             masked_variants['custom'] = np.where(masks['custom'], np.nan, data)
 
         # Create directory if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
-        print(f"Debug: Output directory {output_dir} ensured")
 
         # Save each masked variant to disk
         for name, variant in masked_variants.items():
-            np.save(f'{output_dir}/{name}.npy', variant)
-            print(f"Debug: Saved {name}.npy to {output_dir}")
+            # Create absolute path for each variant
+            variant_path = os.path.join(output_dir, f"{name}.npy")
+            np.save(variant_path, variant)
+            print(f"Debug: Saved {name}.npy to {variant_path}")
         
         print("Masked variants saved to disk.")
-        
-        """
-        print(f"Debug: Entered save_masked_variants, output_dir={output_dir}")
-        
-        # Create variants with proper NaN handling
-        masked_variants = self.create_variants(data, masks)
-        
-        # Create directory if it doesn't exist
-        os.makedirs(output_dir, exist_ok=True)
-        print(f"Debug: Output directory {output_dir} ensured")
 
-        # Save each masked variant to disk (skip None variants)
-        for name, variant in masked_variants.items():
-            if variant is not None:
-                np.save(f'{output_dir}/{name}.npy', variant)
-                print(f"Debug: Saved {name}.npy to {output_dir}")
-            else:
-                print(f"Debug: Skipping {name}.npy (None variant)")
-        
-        print("Masked variants saved to disk.")
-        
-        
-    def delete_masked_variants(self, output_dir: str = 'variants') -> None:
+    def delete_masked_variants(self, output_dir: str = None) -> None:
         """Delete masked variants from disk
         
         Args:
-            output_dir: Directory containing variants (default: 'variants')
+            output_dir: Directory containing variants (default: uses VARIANTS_DIR)
         """
-        print(f"Debug: Entered delete_masked_variants, output_dir={output_dir}")
+        # Use the configured variants directory if none specified
+        if output_dir is None:
+            output_dir = VARIANTS_DIR
+            
+        print(f"Debug: Deleting masked variants from {output_dir}")
+        
         variant_names = ['original', 'cosmic', 'satellite', 'combined', 'custom']
         
         for name in variant_names:
-            variant_path = f'{output_dir}/{name}.npy'
+            variant_path = os.path.join(output_dir, f"{name}.npy")
             if os.path.exists(variant_path):
                 try:
                     os.remove(variant_path)
                     print(f"Debug: Deleted {name}.npy from {output_dir}")
-                except FileNotFoundError:
-                    print(f"Debug: {name}.npy not found, skipping deletion.")
                 except Exception as e:
                     print(f"Debug: Error deleting {name}.npy: {e}")
-            else:
-                print(f"Debug: {name}.npy does not exist in {output_dir}")
         
-        print("Masked variants deleted from disk.")
+        # Also remove path.txt if it exists
+        path_file = os.path.join(output_dir, "path.txt")
+        if os.path.exists(path_file):
+            try:
+                os.remove(path_file)
+                print(f"Debug: Deleted path.txt from {output_dir}")
+            except Exception as e:
+                print(f"Debug: Error deleting path.txt: {e}")
+        
+        print("Masked variants deletion completed.")
+
     
     def process_variants(self,
-                        variants: Dict[str, np.ndarray],
-                        inla_config: Optional[INLAConfig] = None,
-                        output_dir: str = "INLA_output_NPY") -> Dict[str, np.ndarray]:
+                    variants: Dict[str, np.ndarray],
+                    inla_config: Optional[INLAConfig] = None,
+                    output_dir: str = "INLA_output_NPY") -> Dict[str, np.ndarray]:
         """Process each variant through the R-INLA pipeline
         
         Args:
@@ -188,49 +190,56 @@ class FitsProcessor:
         Returns:
             Dictionary of processed arrays with same keys as input
         """
-        print(f"Debug: Entered process_variants, output_dir={output_dir}")
+        # Use absolute paths
+        variants_dir = VARIANTS_DIR
+        output_dir = os.path.abspath(output_dir)
+        
+        print(f"Debug: Processing variants. Variants dir: {variants_dir}, Output dir: {output_dir}")
+        
         processed = {}
-        os.makedirs("variants", exist_ok=True)  # Input dir for .npy files
-        os.makedirs(output_dir, exist_ok=True)   # Output dir for results
+        os.makedirs(variants_dir, exist_ok=True)   # Ensure variants dir exists
+        os.makedirs(output_dir, exist_ok=True)     # Ensure output dir exists
+
+        # Get absolute path to the R script
+        inla_script_path = get_inla_script_path()
+        print(f"Debug: Using R script at: {inla_script_path}")
 
         i = 0
         for variant_name, data in variants.items():
             # Skip original (often doesn't need processing) and None variants
             if variant_name == 'original' and len(variants) > 1:
-                print(f"Debug: Skipping original variant (no processing needed)")
                 continue
                 
             # Skip variants that are None or have no masked pixels (identical to original)
             if data is None:
-                print(f"Debug: Skipping {variant_name} variant (None/empty mask)")
                 processed[variant_name] = None
                 continue
                 
             # Skip variants that are identical to original
             if variant_name != 'original' and np.array_equal(data, variants['original']):
-                print(f"Debug: Skipping {variant_name} variant (identical to original)")
                 processed[variant_name] = None
                 continue
             try:
                 i += 1
                 print(f"Debug: Processing variant {variant_name}")
-                print(f"Debug: Data - type: {type(data)}, shape: {data.shape if data is not None else None}, dtype: {data.dtype if data is not None else None}")
-                print(f"Debug: Contains NaN?: {np.isnan(data).any() if data is not None else 'N/A'}")
+                
+
                 
                 print(f"{colors[i % len(colors)]}Processing {variant_name}...\n Calling R-INLA{Fore.RESET}")
                 
-                # 1. Save input .npy file
-                input_path = f"variants/{variant_name}.npy"
+                # 1. Save input .npy file with absolute path
+                input_path = os.path.join(variants_dir, f"{variant_name}.npy")
                 np.save(input_path, data)
-                print(f"Debug: Saved input file {input_path}")
+                print(f"Debug: Saved input file to {input_path}")
                 
-                # 2. Save the input path to a text file
-                path_file = f"variants/path.txt"
+                # 2. Save the input path to a text file with absolute path
+                path_file = os.path.join(variants_dir, "path.txt")
                 with open(path_file, "w") as f:
                     f.write(input_path)
-                print(f"Debug: Saved path file {path_file}")            
-                # 3. Build R script command with INLA config
-                cmd = ["Rscript", "fyf/r/INLA_pipeline.R"]
+                print(f"Debug: Saved path file to {path_file}")
+                
+                # 3. Build R script command with INLA config and absolute path
+                cmd = ["Rscript", str(inla_script_path)]
                 
                 # Add INLA configuration parameters if provided
                 if inla_config:
@@ -247,53 +256,60 @@ class FitsProcessor:
                         cmd.append("--scaling")
                     if inla_config.nonstationary:
                         cmd.append("--nonstationary")
-                        
+                
                 print(f"Debug: R script command: {' '.join(cmd)}")
 
                 # 4. Call R script
                 try:
                     print("Debug: Running R script subprocess")
-                    subprocess.run(cmd, check=True)
+                    # Create a variant-specific output directory
+                    variant_output_dir = os.path.join(output_dir, variant_name)
+                    os.makedirs(variant_output_dir, exist_ok=True)
+                    
+                    # Set environment variable to tell the R script where to save output
+                    env = os.environ.copy()
+                    env["FYF_OUTPUT_DIR"] = variant_output_dir
+                    
+                    subprocess.run(cmd, check=True, env=env)
                     print(f"Debug: R script executed successfully")
-                    # Check if the output directory exists
-
+                    
                     # 5. Load processed result
-                    output_path = f"{output_dir}/{variant_name}/out.npy"
-                    print(f"Debug: Checking for output file: {output_path}, exists: {os.path.exists(output_path)}")
+                    output_path = os.path.join(variant_output_dir, "out.npy")
+                    print(f"Debug: Checking for output file: {output_path}")
                     
                     if os.path.exists(output_path):
                         processed[variant_name] = np.load(output_path)
-                        if processed[variant_name] is not None:
-                            print(f"Debug: Loaded output, shape: {processed[variant_name].shape}, dtype: {processed[variant_name].dtype}")
-                            print(f"Debug: Output contains NaN?: {np.isnan(processed[variant_name]).any()}")
-                        else:
-                            print(f"Debug: Loaded output is None")
+                        print(f"Debug: Loaded output from {output_path}")
                     else:
                         print(f"Warning: Output file not found at {output_path}")
-                        if os.path.exists(output_dir):
-                            print(f"Debug: Output directory contents: {os.listdir(output_dir)}")
+                        if os.path.exists(variant_output_dir):
+                            print(f"Debug: Output directory contents: {os.listdir(variant_output_dir)}")
                         processed[variant_name] = None
                         
                 except subprocess.CalledProcessError as e:
                     print(f"Error running R script: {e}")
+                    if hasattr(e, 'output'):
+                        print(f"Debug: Command output: {e.output}")
                     processed[variant_name] = None
                 
             except Exception as e:
                 print(f"Failed to process {variant_name}:\n {Fore.RED}Error: {str(e)}{Fore.RESET}")
-                if hasattr(e, 'stdout'):
-                    print(f"Debug: R script stdout: {e.stdout}")
-                if hasattr(e, 'stderr'):
-                    print(f"Debug: R script stderr: {e.stderr}")
                 processed[variant_name] = None  # Mark as failed
 
             finally:
-                # 6. Ensure temporary files are removed
-                if 'input_path' in locals() and os.path.exists(input_path):
-                    print(f"Debug: Removing temporary input file {input_path}")
-                    os.remove(input_path)
-                if 'path_file' in locals() and os.path.exists(path_file):
-                    print(f"Debug: Removing temporary path file {path_file}")
-                    os.remove(path_file)
+                # 6. Ensure temporary files are removed (only if we created them)
+                try:
+                    if 'input_path' in locals():
+                        if os.path.exists(input_path):
+                            print(f"Debug: Cleaning up temporary input file {input_path}")
+                            os.remove(input_path)
+                    
+                    if 'path_file' in locals():
+                        if os.path.exists(path_file):
+                            print(f"Debug: Cleaning up temporary path file {path_file}")
+                            os.remove(path_file)
+                except Exception as cleanup_error:
+                    print(f"Debug: Error during cleanup: {cleanup_error}")
 
         print("Debug: Finished processing all variants")
-        return processed
+        return processed 

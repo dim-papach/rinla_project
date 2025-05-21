@@ -164,6 +164,10 @@ in python3.pkgs.buildPythonPackage rec {
     "--prefix R_LIBS_SITE : ${lib.makeSearchPath "library" runtimeDependencies}"
     "--prefix PATH : ${lib.makeBinPath [ R ]}"
     "--set RETICULATE_PYTHON $(which python3)/bin/python3"
+    "--set FYF_INSTALL_DIR $out "
+    "--set FYF_DATA_DIR $out/share/fyf" 
+    "--set FYF_R_SCRIPTS_DIR $out/lib/fyf/r" 
+    "--set FYF_VARIANTS_DIR $out/share/fyf/variants" 
   ];
   
   # Don't run tests by default as they might require additional setup
