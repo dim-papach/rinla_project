@@ -1,0 +1,4 @@
+Mask Type,Masked Pixels,MSE (Masked),MAE (Masked),SSIM (Masked),Residual Mean (%),Residual Std (%),Residual 5%ile (%),Residual 95%ile (%),Residual IQR (%)
+Cosmic Rays,"38,157",5636797599.4049,16849.2736,0.2047,-49.23,110.19,-100.0,36.5,"[-100.0, 0.9]"
+Satellite Trail,"5,080",22235251581.6702,51585.6950,0.3315,-38.35,54.24,-100.0,35.3,"[-100.0, 2.1]"
+Combined,"42,239",7174033243.6759,20123.5165,0.2168,-48.21,106.13,-100.0,36.4,"[-100.0, 1.1]"

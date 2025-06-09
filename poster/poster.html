@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academic Poster</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .poster {
+            /* A0 dimensions: 841mm x 1189mm = 3370px x 4767px at 96 DPI */
+            width: 831mm;
+            height: 1189mm;
+            position: relative;
+            /* Background image can be set here from folder pillars.jpg*/
+            background-image: url("./pillars.jpg") ; /* Replace with your image URL */
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .content-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 120px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto 1fr 1fr auto;
+            gap: 60px;
+            grid-template-areas: 
+                "header header"
+                "intro intro"
+                "content1 content2"
+                "content3 content3"
+                "footer footer";
+        }
+        
+        .text-box {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .header {
+            grid-area: header;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 120px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+            line-height: 1.1;
+        }
+        
+        .header .authors {
+            font-size: 48px;
+            color: #444;
+            margin-bottom: 20px;
+        }
+        
+        .header .affiliation {
+            font-size: 36px;
+            color: #666;
+        }
+        
+        .intro {
+            grid-area: intro;
+        }
+        
+        .intro h2 {
+            font-size: 72px;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        
+        .intro p {
+            font-size: 42px;
+            line-height: 1.4;
+            color: #333;
+        }
+        
+        .content1 {
+            grid-area: content1;
+        }
+        
+        .content2 {
+            grid-area: content2;
+        }
+        
+        .content3 {
+            grid-area: content3;
+        }
+        
+        .content-section h3 {
+            font-size: 60px;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
+        
+        .content-section p {
+            font-size: 36px;
+            line-height: 1.4;
+            color: #333;
+            margin-bottom: 25px;
+        }
+        
+        .content-section ul {
+            font-size: 36px;
+            line-height: 1.4;
+            color: #333;
+            padding-left: 30px;
+        }
+        
+        .content-section li {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .footer {
+            grid-area: footer;
+            text-align: center;
+        }
+        
+        .footer li {
+            font-size: 26px;
+            color: #333;
+            margin-bottom: 15px;
+            font-style: italic;
+        }
+        .footer h3 {
+            font-size: 48px;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+        
+        .footer p {
+            font-size: 32px;
+            color: #444;
+            line-height: 1.3;
+        }
+        
+        .qr-placeholder {
+            width: 200px;
+            height: 200px;
+            background: rgba(0,0,0,0.1);
+            border-radius: 15px;
+            margin: 30px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #666;
+        }
+        
+        /* Print styles for A0 */
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+            
+            .poster {
+                width: 841mm;
+                height: 1189mm;
+                box-shadow: none;
+            }
+            
+            @page {
+                size: A0;
+                margin: 0;
+            }
+        }
+        
+        /* Responsive scaling for screen preview */
+        @media screen and (max-width: 1200px) {
+            .poster {
+                transform: scale(0.2);
+                transform-origin: top left;
+                margin-bottom: -3800px;
+                margin-right: -2710px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="poster">
+        <div class="content-overlay">
+            <div class="text-box header">
+                <h1>Fix your FITS (fyf) 
+                    <p style="font-size:52px;">Resolving satellite, cosmic rays and bad pixels in astronomical images</p> </h1>
+
+                <div class="authors">Papachristopoulos Dimitrios¹,  Akras Stavros²</div>
+                <div class="affiliation">¹University Name, ²Institution Name,</div>
+            </div>
+            
+            <div class="text-box intro">
+                <h2>Abstract</h2>
+            <p> Meteors, satellites, cosmic rays, and bad pixels are just a few of the obstacles that create artifacts in images and complicate the interpretation of astronomical observations. 
+                Satellites are a very common problem nowadays due to the launch of thousands of them by various companies and nations around the world. 
+                With limited time and resources, every astronomical image holds significant value, and often astronomers must work with compromised images. 
+                By employing the Integrated Nested Laplace Approximation (INLA) algorithm, which offers a quicker alternative to the Markov Chain Monte Carlo (MCMC) method, 
+                we have created an open-source command-line interface (CLI) tool that can restore images. 
+                The algorithm has been applied to the planetary nebulae NGC 7009 and the HII region M16  with an accuracy between 70-99% (Structural similarity index measure; SSIM) and a residual percentage between -8% and 8% with a mean residual close to 0.</p>
+            </div>
+            
+            <div class="text-box content-section content1">
+                <h3>Aims</h3>
+                <!-- Add this where you want the prompt to appear, e.g., in a Methods or Results section -->
+                <p>We created the FYF command-line interface (CLI) tool to process astronomical FITS images. 
+                    The tool is designed to handle various artifacts such as:</p>
+                    <li>cosmic rays,</li> 
+                    <li>satellite trails,</li> 
+                    <li> bad pixels, </li>  
+                    <li> astronomical objects, such as Low Ionization Structures (LIS) </li>
+                <p>using the R-INLA algorithm.</p>
+                
+            </div>
+            <div class="text-box content-section content2">
+                <h3>R-INLA</h3>
+                <p>Integrated Nested Laplace Approximation (INLA) algorithm is a potentially quicker alternative to the Markov Chain Monte Carlo (MCMC) method,
+                    which is commonly used for Bayesian inference for latent Gaussian models.
+                    INLA is particularly useful for spatial and temporal data analysis, making it suitable for processing astronomical images.
+                    The algorithm works by approximating the posterior distribution of the latent variables in a Gaussian Markov random field (GMRF) framework, 
+                    meaning that each pixel in the image is treated not as an independent entity but rather is influenced by its neighboring pixels.
+                    By applying INLA, the algorithm treats the corrupted image as a latent field, which we want to recover. 
+                    The output of the INLA algorithm is a filled image where the missing or corrupted pixels are estimated based on the surrounding pixel values.
+                </p>
+
+
+                
+ 
+            </div>
+
+            <div class="text-box content-section content3">
+               <h3>FYF Command-Line Usage</h3>
+                <pre style="background:#0B151E; color:#eee; padding:24px; border-radius:10px; font-size:32px; overflow-x:auto;">
+<code>$ fyf --input input_file.fits --output output_file.fits </code>
+                </pre>
+                <div style="display: flex; justify-content: center; align-items: flex-start; gap: 40px;">
+
+                    <div class="text-box">
+                        <h4 style="font-size: 36px; color: #333;">HII region M16</h4>
+                        <img src="../comparison_plots/m16/comparison_test.png" alt="FYF CLI Usage" style="width:60%; border-radius:10px; box-shadow:0 0px 0px rgba(0,0,0,0.1);">
+                        <p style="text-align:center; font-size:32px; color:#333;">Example of FYF CLI usage</p>
+
+                        <img src="../comparison_plots/m16/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 70%; border-radius:10px; box-shadow:0 0px 0px rgba(0,0,0,0.1);">
+                        <p style="font-size:32px; color:#333;">Masked Pixel Analysis</p>
+                        </div>
+                    <div class="text-box">
+                        <h4 style="font-size: 36px; color: #333;">Planetary nebulae NGC 7009</h4>
+                        <img src="../comparison_plots/ngc7009/comparison_test.png" alt="FYF CLI Usage" style="width:60%; border-radius:10px; box-shadow:0 0px 0px rgba(0,0,0,0.1);">
+                        <p style="text-align:center; font-size:32px; color:#333;">Example of FYF CLI usage</p>
+                        <img src="../comparison_plots/ngc7009/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 70%; border-radius:10px; box-shadow:0 0px 0px rgba(0,0,0,0.1);">
+                        <p style="font-size:32px; color:#333;">Masked Pixel Analysis</p>
+                        </div>
+
+                </div>
+            </div>
+            
+            <div class="text-box footer">
+                <h3>Contact & References</h3>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
+                    <!-- Contact Info -->
+                    <div style="flex:1; text-align:left;">
+                        <img src="logo_ekpa_new.png" style="width: 450px; height: auto; margin-bottom: 20px;">
+                        <br>
+                        <img src="National_Observatory_of_Athens.svg" style="width: 250px; height: auto; margin-bottom: 20px;">
+                        <img src="IAASARS_logo_EN.jpg" style="width: 250px; height: auto; margin-bottom: 20px;">
+                    </div>
+                    <!-- QR Code -->
+                    <div style="flex:1; display: flex; flex-direction: column; align-items: center;">
+                        <p>📧 dipapachristopoulos@protonmail.com </p>
+                        <p>🌐 dim-papach.github.io/quartz/</p>
+                        <div class="qr-placeholder">
+                            <img src="qr_code.png" alt="QR Code" style="width: 120%; height: 120%; border-radius: 10px;">
+                        </div>
+                    </div>
+                    <!-- References -->
+                    <div style="flex:1; text-align:right;">
+                        <p>Selected references:</p>
+                        <li>S. Gonzalez-Gait ́an et al. (2019). Monthly Notices of the Royal Astronomical Society.<br>
+                        DOI: 10.1093/mnras/sty2881</li>
+                        <li>Spatial field reconstruction with INLA, </li>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

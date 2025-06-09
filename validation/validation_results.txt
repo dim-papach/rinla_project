@@ -1,0 +1,15 @@
+FYF Validation Results
+=====================
+
+Original:  test.fits
+Processed: ./processed_output/combined/processed.fits
+
+SSIM: 0.995259
+
+Residual Statistics:
+  mean: -49.0254
+  median: -100.0000
+  min: -100.0000
+  max: 25421.0583
+  std: 109.5541
+  nan_percentage: 1.8465
