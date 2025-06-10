@@ -45,15 +45,15 @@
             bottom: 0;
             padding: 120px;
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr 1fr 1fr;
             grid-template-rows: auto auto 1fr 1fr auto;
             gap: 60px;
             grid-template-areas: 
-                "header header"
-                "intro intro"
-                "content1 content2"
-                "content3 content3"
-                "footer footer";
+                "header header header"
+                "intro intro intro"
+                "content1 content2 content3"
+                "content4 content4 content4"
+                "footer footer footer";
         }
         
         .text-box {
@@ -118,6 +118,10 @@
             grid-area: content3;
         }
         
+        .content4 {
+            grid-area: content4;
+        }
+        
         .content-section h3 {
             font-size: 60px;
             color: #1a1a1a;
@@ -125,6 +129,12 @@
             font-weight: 600;
         }
         
+        .content-section h4 {
+            font-size: 40px;
+            color: #1a1a1a;
+            margin-bottom: 30px;
+            font-weight: 600;
+        }
         .content-section p {
             font-size: 36px;
             line-height: 1.4;
@@ -216,13 +226,27 @@
 <body>
     <div class="poster">
         <div class="content-overlay">
-            <div class="text-box header">
-                <h1>Fix your FITS (fyf) 
-                    <p style="font-size:52px;">Resolving satellite, cosmic rays and bad pixels in astronomical images</p> </h1>
-
-                <div class="authors">Papachristopoulos Dimitrios¹,  Akras Stavros²</div>
-                <div class="affiliation">¹University Name, ²Institution Name,</div>
-            </div>
+            <div class="text-box header" style="display: flex; align-items: center; justify-content: space-between;">
+    <!-- Left side: your logo(s) -->
+    <div style="flex: 0 0 auto; margin-left: 40px;">
+        <img src="2nd_logo.png" alt="Your Logo" style="width: 350px; border-radius: 200px; ">
+    </div>
+    <!-- Center: title and authors -->
+    <div style="flex: 1; text-align: center;">
+        <h1>Fix your FITS (fyf) 
+            <p style="font-size:52px;">Resolving satellite, cosmic rays and bad pixels in astronomical images</p>
+        </h1>
+        <div class="authors">Papachristopoulos Dimitrios<sup>1</sup>,  Akras Stavros<sup>2,3</sup></div>
+        <div class="affiliation"><sup>1</sup>National and Kapodistrian University of Athens,
+                                <sup>2</sup>National Observatory of AthensInstitution Name,<br>
+                                <sup>3</sup>Institute for Astronomy, Astrophysics, Space Applications, and Remote Sensing</div>
+    </div>
+    <!-- Right side: your logo -->
+    <div style="flex: 0 0 auto; margin-right: 40px;">
+        <img src="logo_ekpa_new.png" style="width: 450px; height: auto; margin-bottom: 20px;"><br>
+        <img src="comb_logos.png" alt="Your Logo" style="width: 450px;">
+    </div>
+</div>
             
             <div class="text-box intro">
                 <h2>Abstract</h2>
@@ -236,82 +260,106 @@
             
             <div class="text-box content-section content1">
                 <h3>Aims</h3>
-                <!-- Add this where you want the prompt to appear, e.g., in a Methods or Results section -->
                 <p>We created the FYF command-line interface (CLI) tool to process astronomical FITS images. 
-                    The tool is designed to handle various artifacts such as:</p>
+                    The tool is to use the R-INLA package to handle various artifacts such as:</p>
+                    <ul>
                     <li>cosmic rays,</li> 
                     <li>satellite trails,</li> 
-                    <li> bad pixels, </li>  
-                    <li> astronomical objects, such as Low Ionization Structures (LIS) </li>
-                <p>using the R-INLA algorithm.</p>
-                
+                    <li>bad pixels,</li>  
+                    <li>other astronomical objects, such as Low Ionization Structures (LIS)</li></ul>
             </div>
+            
             <div class="text-box content-section content2">
-                <h3>R-INLA</h3>
+                <h3>INLA</h3>
                 <p>Integrated Nested Laplace Approximation (INLA) algorithm is a potentially quicker alternative to the Markov Chain Monte Carlo (MCMC) method,
                     which is commonly used for Bayesian inference for latent Gaussian models.
-                    INLA is particularly useful for spatial and temporal data analysis, making it suitable for processing astronomical images.
-                    The algorithm works by approximating the posterior distribution of the latent variables in a Gaussian Markov random field (GMRF) framework, 
-                    meaning that each pixel in the image is treated not as an independent entity but rather is influenced by its neighboring pixels.
+                    INLA is particularly useful for spatial data analysis, making it suitable for processing astronomical images.
+                    <!--The algorithm works by approximating the posterior distribution of the latent variables in a Gaussian Markov random field (GMRF) framework, 
+                    meaning that each pixel in the image is treated not as an independent entity but rather is influenced by its neighboring pixels.-->
                     By applying INLA, the algorithm treats the corrupted image as a latent field, which we want to recover. 
-                    The output of the INLA algorithm is a filled image where the missing or corrupted pixels are estimated based on the surrounding pixel values.
-                </p>
-
-
-                
+                    The output of the <code>fyf</code> algorithm is a filled image where the missing or corrupted pixels are estimated based on the surrounding pixel values.
+                </p>               
  
             </div>
 
             <div class="text-box content-section content3">
+                <h3>FYF Testing</h3>
+                <ul>
+                    <li>We use two astronomical FITS images:</li>
+                        <ul>
+                        <li>Planetary nebulae NGC 7009</li>
+                        <li>HII region M16</li></ul>
+                    <li>Introduce artifacts in images (cosmic rays and satellite trails), and process them.</li>
+                    <li>Compare the processed and the original using:</li>
+                    <ul>
+                        <li>Residual percentage and standard deviation</li>
+                        <li>Structural Similarity Index Measure (SSIM)</li>
+                </ul>
+            </div>
+
+            <div class="text-box content-section content4">
                <h3>FYF Command-Line Usage</h3>
-                <pre style="background:#0B151E; color:#eee; padding:24px; border-radius:10px; font-size:32px; overflow-x:auto;">
-<code>$ fyf --input input_file.fits --output output_file.fits </code>
+                <pre style="color:#497784;background: #0B1824; padding:24px; border-radius:10px; font-size:32px; overflow-x:auto;">
+<code>$ <strong> fyf process --cosmic_fraction 20% --number_of_satellites 5 </strong>--input input_file.fits --output output_file.fits  </code>
                 </pre>
-                <div style="display: flex; justify-content: center; align-items: flex-start; gap: 40px;">
+                <div style="display: flex; justify-content: center; align-items: flex-start; gap: 20px;">
 
-                    <div class="text-box">
-                        <h4 style="font-size: 36px; color: #333;">HII region M16</h4>
-                        <img src="../comparison_plots/m16/comparison_test.png" alt="FYF CLI Usage" style="width:60%; border-radius:10px; box-shadow:0 0px 0px rgba(0,0,0,0.1);">
-                        <p style="text-align:center; font-size:32px; color:#333;">Example of FYF CLI usage</p>
-
-                        <img src="../comparison_plots/m16/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 70%; border-radius:10px; box-shadow:0 0px 0px rgba(0,0,0,0.1);">
+                    <!-- Left Column -->
+                    <div class="text-box" style="flex: 2; padding: 15px; align-items: left; text-align: left;">
+                        <h3>HII region M16</h3>
+                        <p>SSIM = 99%>80%, Mean Residual = 0.18%~0 (σ=4.1) </p>
+                        <img src="../comparison_plots/m16/1comparison_test.png" alt="FYF CLI Usage" style="width:75%;">
+                        <p style="font-size:32px; color:#333;">Original image compared to the output with the combined artifacts</p>
+                        <img src="../comparison_plots/m16/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 75%;">
                         <p style="font-size:32px; color:#333;">Masked Pixel Analysis</p>
-                        </div>
-                    <div class="text-box">
-                        <h4 style="font-size: 36px; color: #333;">Planetary nebulae NGC 7009</h4>
-                        <img src="../comparison_plots/ngc7009/comparison_test.png" alt="FYF CLI Usage" style="width:60%; border-radius:10px; box-shadow:0 0px 0px rgba(0,0,0,0.1);">
-                        <p style="text-align:center; font-size:32px; color:#333;">Example of FYF CLI usage</p>
-                        <img src="../comparison_plots/ngc7009/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 70%; border-radius:10px; box-shadow:0 0px 0px rgba(0,0,0,0.1);">
+                    </div>
+                    
+                    <!-- Center Column -->
+                    <div style="flex:1; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 15px;">
+                        <h3>Results</h3>
+                        <ul>
+                            <li> When comparing the both the whole images and only the masked images we get <strong>Mean Residual Percentages~0%</strong></li>
+                            <li> The <strong>SSIM</strong> values are very high, <strong>~99%</strong>.</li>
+                            <li> The <strong>σ</strong> values are very low, <strong>~4.1</strong>.</li>
+                            <li> Even when comparing only the regions covered with artifacts, the Mean Residual Percentage as around 0% with a low σ</li>
+                        </ul>
+                            <div style="font-size: 40px; color:#497784;background: #0B1824; margin-top: 20px; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 4px 8px rgba(0, 0, 0, 0.178);"> 
+                                <strong> FYF is able to restore the images with high accuracy, even with significant artifacts. </strong>
+                            </div>
+                            
+                    </div>
+                    
+                    <!-- Right Column -->
+                    <div class="text-box" style="flex: 2; padding: 15px; align-items: right; text-align: right;">
+                        <h3>PN NGC7009</h3>
+                        <p>SSIM = <u>xxx</u>%>80%, Mean Residual = <u>xxx</u>%~0 (σ=<u>xxx</u>)</p>
+                        <img src="../comparison_plots/ngc7009/comparison_test.png" alt="FYF CLI Usage" style="width:80%;">
+                        <p style="font-size:32px; color:#333;">Original image compared to the output with the combined artifacts</p>
+                        <img src="../comparison_plots/ngc7009/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 80%;">
                         <p style="font-size:32px; color:#333;">Masked Pixel Analysis</p>
-                        </div>
-
+                    </div>
                 </div>
             </div>
             
             <div class="text-box footer">
-                <h3>Contact & References</h3>
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
                     <!-- Contact Info -->
                     <div style="flex:1; text-align:left;">
-                        <img src="logo_ekpa_new.png" style="width: 450px; height: auto; margin-bottom: 20px;">
-                        <br>
-                        <img src="National_Observatory_of_Athens.svg" style="width: 250px; height: auto; margin-bottom: 20px;">
-                        <img src="IAASARS_logo_EN.jpg" style="width: 250px; height: auto; margin-bottom: 20px;">
+                        <h3>Selected references:</h3>
+                        <li>S. Gonzalez-Gaitan, et al., 2019, MNRAS 482, 3880-3891</li>
+                        <li>Majda Smole, et al., 2023, A&A 669, A152</li>
+                        <li>www.r-inla.org</li>
+                        <li>The images where downloaded from <u>xxxxx</u></li>
                     </div>
                     <!-- QR Code -->
                     <div style="flex:1; display: flex; flex-direction: column; align-items: center;">
-                        <p>📧 dipapachristopoulos@protonmail.com </p>
+                        <h3>Contact</h3>
+                        <p>✉️ dipapachristopoulos@protonmail.com, stavrosakras@noa.gr </p>
                         <p>🌐 dim-papach.github.io/quartz/</p>
-                        <div class="qr-placeholder">
-                            <img src="qr_code.png" alt="QR Code" style="width: 120%; height: 120%; border-radius: 10px;">
-                        </div>
                     </div>
                     <!-- References -->
                     <div style="flex:1; text-align:right;">
-                        <p>Selected references:</p>
-                        <li>S. Gonzalez-Gait ́an et al. (2019). Monthly Notices of the Royal Astronomical Society.<br>
-                        DOI: 10.1093/mnras/sty2881</li>
-                        <li>Spatial field reconstruction with INLA, </li>
+                            <img src="qr_code.png" alt="QR Code" style="width: 25%;">
                     </div>
                 </div>
             </div>
