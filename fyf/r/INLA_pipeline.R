@@ -18,6 +18,7 @@ setwd(here::here())
 cat("Debug: Current working directory after setwd:", getwd(), "\n")
 
 scalingg <- TRUE
+max_edge_resolution <- 30
 cat("Debug: scalingg set to TRUE\n")
 inla.setOption(num.threads = 6)
 cat("Debug: INLA num.threads set to 6\n")
@@ -36,9 +37,10 @@ tryCatch({
       stop("No valid path provided. Please create a path.txt file or provide a path as an argument.")
     }
   }
-  npy_path <- readLines(file_path)
+  npy_path <- readLines(file_path, n = -1)
+  print(npy_path)
   cat("Debug: npy_path loaded:", npy_path, "\n")
-  
+
   # 2. Load and process data
   cat("Debug: Loading npy data from", npy_path, "\n")
   raw_data <- load_npy(npy_path)
@@ -80,7 +82,7 @@ tryCatch({
   # 6. Create mesh
   print("Create_mesh")
   cat("Debug: Calling create_inla_mesh\n")
-  inla_mesh <- create_inla_mesh(model_params$x, model_params$y)
+  inla_mesh <- create_inla_mesh(model_params$x, model_params$y, resolution = max_edge_resolution)
   cat("Debug: create_inla_mesh returned\n")
 
   # 7. Define SPDE model
