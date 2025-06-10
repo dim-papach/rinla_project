@@ -318,10 +318,11 @@
                     <div style="flex:1; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 15px;">
                         <h3>Results</h3>
                         <ul>
-                            <li> When comparing the both the whole images and only the masked images we get <strong>Mean Residual Percentages~0%</strong></li>
-                            <li> The <strong>SSIM</strong> values are very high, <strong>~99%</strong>.</li>
-                            <li> The <strong>σ</strong> values are very low, <strong>~4.1</strong>.</li>
-                            <li> Even when comparing only the regions covered with artifacts, the Mean Residual Percentage as around 0% with a low σ</li>
+                            <li>When comparing the both the whole images and only the masked images we get 
+                                <strong>Mean Residual Percentages < 10%</strong><br>
+                                with a low standard deviation <strong>σ < 10%</strong></li>
+                            <li>The <strong>SSIM</strong> values are very high, <strong>~99%</strong>.</li> 
+                            <li>Even when comparing only the regions covered with artifacts, the Mean Residual Percentage as around 0% with a low σ</li>
                         </ul>
                             <div style="font-size: 40px; color:#497784;background: #0B1824; margin-top: 20px; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 4px 8px rgba(0, 0, 0, 0.178);"> 
                                 <strong> FYF is able to restore the images with high accuracy, even with significant artifacts. </strong>
@@ -332,10 +333,10 @@
                     <!-- Right Column -->
                     <div class="text-box" style="flex: 2; padding: 15px; align-items: right; text-align: right;">
                         <h3>PN NGC7009</h3>
-                        <p>SSIM = <u>xxx</u>%>80%, Mean Residual = <u>xxx</u>%~0 (σ=<u>xxx</u>)</p>
-                        <img src="../comparison_plots/ngc7009/comparison_test.png" alt="FYF CLI Usage" style="width:80%;">
+                        <p>SSIM = 98%>80%, Mean Residual = 4.1% (σ=8.6)</p>
+                        <img src="../comparison_plots/ngc7009/1comparison_test.png" alt="FYF CLI Usage" style="width:100%;">
                         <p style="font-size:32px; color:#333;">Original image compared to the output with the combined artifacts</p>
-                        <img src="../comparison_plots/ngc7009/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 80%;">
+                        <img src="../comparison_plots/ngc7009/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 100%;">
                         <p style="font-size:32px; color:#333;">Masked Pixel Analysis</p>
                     </div>
                 </div>
