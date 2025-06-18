@@ -25,7 +25,7 @@
         
         .poster {
             /* A0 dimensions: 841mm x 1189mm = 3370px x 4767px at 96 DPI */
-            width: 831mm;
+            width: 841mm;
             height: 1189mm;
             position: relative;
             /* Background image can be set here from folder pillars.jpg*/
@@ -33,7 +33,7 @@
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            /*box-shadow: 0 20px 40px rgba(0,0,0,0.1); */
             overflow: hidden;
         }
         
@@ -58,7 +58,7 @@
         
         .text-box {
             backdrop-filter: blur(10px);
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.678);
             border-radius: 20px;
             padding: 40px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
@@ -236,10 +236,9 @@
         <h1>Fix your FITS (fyf) 
             <p style="font-size:52px;">Resolving satellite, cosmic rays and bad pixels in astronomical images</p>
         </h1>
-        <div class="authors">Papachristopoulos Dimitrios<sup>1</sup>,  Akras Stavros<sup>2,3</sup></div>
+        <div class="authors">Papachristopoulos Dimitrios<sup>1</sup>,  Akras Stavros<sup>2</sup></div>
         <div class="affiliation"><sup>1</sup>National and Kapodistrian University of Athens,
-                                <sup>2</sup>National Observatory of AthensInstitution Name,<br>
-                                <sup>3</sup>Institute for Astronomy, Astrophysics, Space Applications, and Remote Sensing</div>
+                                <sup>2</sup>Institute for Astronomy, Astrophysics, Space Applications, and Remote Sensing</div>
     </div>
     <!-- Right side: your logo -->
     <div style="flex: 0 0 auto; margin-right: 40px;">
@@ -271,13 +270,13 @@
             
             <div class="text-box content-section content2">
                 <h3>INLA</h3>
-                <p>Integrated Nested Laplace Approximation (INLA) algorithm is a potentially quicker alternative to the Markov Chain Monte Carlo (MCMC) method,
+                <p><strong>Integrated Nested Laplace Approximation (INLA)</strong> is a potentially quicker alternative to the <i>Markov Chain Monte Carlo (MCMC)</i> method,
                     which is commonly used for Bayesian inference for latent Gaussian models.
                     INLA is particularly useful for spatial data analysis, making it suitable for processing astronomical images.
                     <!--The algorithm works by approximating the posterior distribution of the latent variables in a Gaussian Markov random field (GMRF) framework, 
                     meaning that each pixel in the image is treated not as an independent entity but rather is influenced by its neighboring pixels.-->
                     By applying INLA, the algorithm treats the corrupted image as a latent field, which we want to recover. 
-                    The output of the <code>fyf</code> algorithm is a filled image where the missing or corrupted pixels are estimated based on the surrounding pixel values.
+                    The output of <strong><code>fyf</code></strong> is a filled image where the missing or corrupted pixels are estimated based on the surrounding pixel values.
                 </p>               
  
             </div>
@@ -308,21 +307,20 @@
                     <div class="text-box" style="flex: 2; padding: 15px; align-items: left; text-align: left;">
                         <h3>HII region M16</h3>
                         <p>SSIM = 99%>80%, Mean Residual = 0.18%~0 (σ=4.1) </p>
-                        <img src="../comparison_plots/m16/1comparison_test.png" alt="FYF CLI Usage" style="width:75%;">
-                        <p style="font-size:32px; color:#333;">Original image compared to the output with the combined artifacts</p>
-                        <img src="../comparison_plots/m16/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 75%;">
+                        <img src="../comparison_plots/m16/comparison_test.png" alt="FYF CLI Usage" style="width:90%;">
+                        <p style="font-size:32px; color:#333;">Left (observed image), Right (modelled image)</p>
+                        <img src="../comparison_plots/m16/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 95%;">
                         <p style="font-size:32px; color:#333;">Masked Pixel Analysis</p>
                     </div>
                     
                     <!-- Center Column -->
                     <div style="flex:1; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 15px;">
-                        <h3>Results</h3>
+                        <h3>Preliminary results</h3>
                         <ul>
-                            <li>When comparing the both the whole images and only the masked images we get 
-                                <strong>Mean Residual Percentages < 10%</strong><br>
+                            <li>The comparison of the observed and modeled images results in <strong>Mean Residual Percentages < 10%</strong><br>
                                 with a low standard deviation <strong>σ < 10%</strong></li>
                             <li>The <strong>SSIM</strong> values are very high, <strong>~99%</strong>.</li> 
-                            <li>Even when comparing only the regions covered with artifacts, the Mean Residual Percentage as around 0% with a low σ</li>
+                            <li>The comparison of specific nebular regions covered with artifacts, results in Mean Residual Percentage close to 0% with a low σ</li>
                         </ul>
                             <div style="font-size: 40px; color:#497784;background: #0B1824; margin-top: 20px; padding: 20px; border-radius: 10px; text-align: center; box-shadow: 4px 8px rgba(0, 0, 0, 0.178);"> 
                                 <strong> FYF is able to restore the images with high accuracy, even with significant artifacts. </strong>
@@ -335,7 +333,7 @@
                         <h3>PN NGC7009</h3>
                         <p>SSIM = 98%>80%, Mean Residual = 4.1% (σ=8.6)</p>
                         <img src="../comparison_plots/ngc7009/1comparison_test.png" alt="FYF CLI Usage" style="width:100%;">
-                        <p style="font-size:32px; color:#333;">Original image compared to the output with the combined artifacts</p>
+                        <p style="font-size:32px; color:#333;">Left (observed image), Right (modelled image)</p>
                         <img src="../comparison_plots/ngc7009/masked_pixel_analysis.png" alt="Masked Pixel Analysis" style="width: 100%;">
                         <p style="font-size:32px; color:#333;">Masked Pixel Analysis</p>
                     </div>
@@ -346,11 +344,10 @@
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 40px;">
                     <!-- Contact Info -->
                     <div style="flex:1; text-align:left;">
-                        <h3>Selected references:</h3>
+                        <h3>References:</h3>
                         <li>S. Gonzalez-Gaitan, et al., 2019, MNRAS 482, 3880-3891</li>
                         <li>Majda Smole, et al., 2023, A&A 669, A152</li>
                         <li>www.r-inla.org</li>
-                        <li>The images where downloaded from <u>xxxxx</u></li>
                     </div>
                     <!-- QR Code -->
                     <div style="flex:1; display: flex; flex-direction: column; align-items: center;">
@@ -360,7 +357,7 @@
                     </div>
                     <!-- References -->
                     <div style="flex:1; text-align:right;">
-                            <img src="qr_code.png" alt="QR Code" style="width: 25%;">
+                            <img src="qr_code.png" alt="QR Code" style="width: 20%;">
                     </div>
                 </div>
             </div>
