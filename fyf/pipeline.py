@@ -11,7 +11,7 @@ from typing import Dict, Optional, Any, Union
 
 import numpy as np
 
-from fyf.core.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
+from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
 from fyf.core.data.file_handler import FileHandler
 from fyf.core.data.masking import MaskGenerator
 from fyf.core.processing.fits_processor import FitsProcessor

@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 from typing import Dict, Optional, Union, Tuple
 
-from fyf.core.config import INLAConfig
+from fyf.config.config import INLAConfig
 
 
 class INLAWrapper:

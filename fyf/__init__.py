@@ -22,8 +22,8 @@ __email__ = "example@example.com"
 __license__ = "MIT"
 
 # Import core components for easier access
-from fyf.core.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
-from fyf.core.pipeline import SimulationPipeline
+from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
+from fyf.pipeline import SimulationPipeline
 
 # Define what's available at the top level
 __all__ = [

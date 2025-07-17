@@ -17,14 +17,14 @@ init(autoreset=True)
 
 # Import existing FYF components
 try:
-    from fyf.core.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
+    from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
     from fyf.core.data.masking import MaskGenerator
     from fyf.core.processing.fits_processor import FitsProcessor
     from fyf.core.data.file_handler import FileHandler
     from fyf.core.validation import validate_images
     from fyf.core.visualization.plotting import PlotGenerator
     from fyf.core.visualization.report import ReportGenerator
-    from fyf.core.config_manager import ConfigManager
+    from fyf.config.config_manager import ConfigManager
 except ImportError as e:
     click.echo(f"Error importing FYF modules: {e}", err=True)
     sys.exit(1)

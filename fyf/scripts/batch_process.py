@@ -15,8 +15,8 @@ import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from fyf.core.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
-from fyf.core.pipeline import SimulationPipeline
+from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
+from fyf.pipeline import SimulationPipeline
 from fyf.core.visualization.report import ReportGenerator
 
 def parse_args():

@@ -16,7 +16,7 @@ from colorama import Fore, init
 init()
 colors = [Fore.WHITE, Fore.YELLOW, Fore.BLUE, Fore.MAGENTA, Fore.CYAN]
 
-from fyf.core.config import CosmicConfig, SatelliteConfig, INLAConfig
+from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig
 from fyf.core.paths import (
     VARIANTS_DIR, get_variant_path, get_path_file, 
     get_inla_script_path, get_output_dir
