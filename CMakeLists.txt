@@ -286,10 +286,11 @@ add_custom_target(check-r-version
 add_custom_target(install-system-deps
     COMMAND ${CMAKE_COMMAND} -E echo "Installing system dependencies for ${LINUX_DISTRO}..."
     COMMAND sudo apt update
-    COMMAND sudo apt install -y build-essential cmake pkg-config
+    COMMAND sudo apt install -y build-essential cmake pkg-config 
     COMMAND sudo apt install -y python3-dev python3-pip r-base-dev
     COMMAND sudo apt install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev libsqlite3-dev
-    COMMAND sudo apt install -y libssl-dev libxml2-dev libcurl4-openssl-dev zlib1g-dev
+    COMMAND sudo apt install -y libssl-dev libxml2-dev libcurl4-openssl-dev zlib1g-dev 
+    COMMAND sudo apt install -y libfontconfig1-dev libharfbuzz-dev libfribidi-dev libabsl-dev
     COMMAND ${CMAKE_COMMAND} -E echo "System dependencies installation complete!"
     COMMENT "Installing system dependencies"
 )
@@ -327,9 +328,6 @@ install_if_missing <- function(pkg) {
 # Core packages needed for INLA and spatial analysis
 packages <- c(
     #'systemfonts', # Required for textshaping
-    'Matrix',      # Required for INLA
-    'sp',          # Spatial data classes
-    'foreach',     # Parallel computing
     'sf',          # Simple features for R
     'optparse',    # Command line parsing  
     'reticulate',  # Python interface
@@ -337,7 +335,10 @@ packages <- c(
     #'devtools',    # Development tools
     'dplyr',       # Data manipulation
     'ggplot2',     # Plotting
-    'viridis'      # Color scales
+    'viridis',      # Color scales
+    'foreach',     # Parallel computing
+    'sp',          # Spatial data classes
+    'Matrix'      # Required for INLA
 )
 
 # Install packages
@@ -478,7 +479,7 @@ add_custom_target(install-inla
 # Install FYF package in development mode
 add_custom_target(install-fyf
     COMMAND ${CMAKE_COMMAND} -E echo "Installing FYF package in development mode..."
-    COMMAND python3 -m pip install --user -e ${CMAKE_SOURCE_DIR}
+    COMMAND pipx install ${CMAKE_SOURCE_DIR}
     COMMAND ${CMAKE_COMMAND} -E echo "FYF package installed successfully!"
     DEPENDS install-inla
     COMMENT "Installing FYF package"

@@ -1,18 +1,32 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: fyf
 Version: 0.1.0
 Summary: Fill Your FITS - Process astronomical FITS images using R-INLA
 Home-page: https://github.com/dim-papach/rinla_project
 Author: FYF Contributors
 Author-email: dipapachristopoulos@protonmail.com
-License: UNKNOWN
-Platform: UNKNOWN
 Classifier: Programming Language :: Python :: 3
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Operating System :: OS Independent
 Classifier: Topic :: Scientific/Engineering :: Astronomy
 Requires-Python: >=3.6
 Description-Content-Type: text/markdown
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: astropy
+Requires-Dist: matplotlib
+Requires-Dist: colorama
+Requires-Dist: scikit-image
+Requires-Dist: scikit-learn
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
 
 This project is based on the work of [Spatial field reconstruction with INLA: application to IFU galaxy data](https://academic.oup.com/mnras/article/482/3/3880/5144230) and [Spatial field reconstruction with INLA: Application to simulated galaxies](https://www.aanda.org/10.1051/0004-6361/202244481).
 
@@ -55,5 +69,3 @@ To make sure you don&rsquo;t have a dependency problem, follow the instructions
 - [Nix](./docs/nix.md)
 - [Wiki](https://github.com/dim-papach/rinla_project/wiki)
 - [targets](https://books.ropensci.org/targets/)
-
-

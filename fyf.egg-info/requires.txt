@@ -1,7 +1,7 @@
-astropy
-colorama
-matplotlib
 numpy
+scipy
+astropy
+matplotlib
+colorama
 scikit-image
 scikit-learn
-scipy
