@@ -71,7 +71,7 @@ let
  
 # System packages to be included (Downloaded from the nixpkgs repo)
   system_packages = builtins.attrValues {
-  inherit (pkgs) R glibcLocales nix gnugrep glibc python311 toybox cowsay pandoc openblas;};
+  inherit (pkgs) R glibcLocales nix gnugrep glibc python311 jupyter toybox cowsay pandoc openblas;};
 # Rebuild R to ensure it uses the specified GLIBC version
 R = pkgs.R.overrideAttrs (oldAttrs: {
   buildInputs = oldAttrs.buildInputs ++ [ pkgs.glibc ];
@@ -101,7 +101,7 @@ R = pkgs.R.overrideAttrs (oldAttrs: {
 
   # Python packages to be included
   python_pkgs = python311.withPackages (ps: with ps; [
-    numpy pandas matplotlib astropy radian scipy scikit-image scikit-learn colorama click
+    numpy pandas matplotlib astropy radian scipy scikit-image scikit-learn colorama click pip seaborn
   ]);
 
 /* haskellPkgs = builtins.attrValues {

@@ -6,7 +6,7 @@ This subpackage provides tools for visualizing data in the FYF package:
 - Report generation for creating HTML and PDF reports
 """
 
-from fyf.core.visualization.plotting import PlotGenerator, InvalidDataError
+from fyf.visualization.plotting import PlotGenerator, InvalidDataError
 
 __all__ = [
     "PlotGenerator",
