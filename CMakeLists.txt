@@ -481,7 +481,7 @@ add_custom_target(install-fyf
     COMMAND ${CMAKE_COMMAND} -E echo "Installing FYF package in development mode..."
     COMMAND pipx install ${CMAKE_SOURCE_DIR} --force
     COMMAND ${CMAKE_COMMAND} -E echo "FYF package installed successfully!"
-    DEPENDS install-inla
+   # DEPENDS install-inla
     COMMENT "Installing FYF package"
 )
 
