@@ -3,6 +3,7 @@ setup.py
 fyf/__init__.py
 fyf/__main__.py
 fyf/cli.py
+fyf/pipeline.py
 fyf.egg-info/PKG-INFO
 fyf.egg-info/SOURCES.txt
 fyf.egg-info/dependency_links.txt
@@ -10,9 +11,7 @@ fyf.egg-info/entry_points.txt
 fyf.egg-info/requires.txt
 fyf.egg-info/top_level.txt
 fyf/core/__init__.py
-fyf/core/config.py
-fyf/core/config_manager.py
-fyf/core/pipeline.py
+fyf/core/paths.py
 fyf/core/validation.py
 fyf/core/data/__init__.py
 fyf/core/data/file_handler.py
@@ -25,3 +24,6 @@ fyf/core/processing/inla_wrapper.py
 fyf/r/__init__.py
 fyf/scripts/__init__.py
 fyf/scripts/batch_process.py
+fyf/visualization/__init__.py
+fyf/visualization/plotting.py
+fyf/visualization/report.py
