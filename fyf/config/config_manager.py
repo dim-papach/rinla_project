@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
 import click
-from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
+from fyf.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
 
 class ConfigManager:
     """Manages configuration files and merging with CLI arguments"""

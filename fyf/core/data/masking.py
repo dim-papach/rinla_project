@@ -12,7 +12,7 @@ from typing import Dict, Tuple, Optional, Union
 from pathlib import Path
 from astropy.io import fits
 
-from fyf.config.config import CosmicConfig, SatelliteConfig
+from fyf.config import CosmicConfig, SatelliteConfig
 
 
 class MaskGenerator:

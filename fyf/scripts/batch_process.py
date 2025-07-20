@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 
-from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
+from fyf.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
 from fyf.pipeline import SimulationPipeline
 from fyf.visualization.report import ReportGenerator
 

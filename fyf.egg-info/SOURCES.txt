@@ -10,6 +10,9 @@ fyf.egg-info/dependency_links.txt
 fyf.egg-info/entry_points.txt
 fyf.egg-info/requires.txt
 fyf.egg-info/top_level.txt
+fyf/config/__init__.py
+fyf/config/config.py
+fyf/config/config_manager.py
 fyf/core/__init__.py
 fyf/core/paths.py
 fyf/core/validation.py
