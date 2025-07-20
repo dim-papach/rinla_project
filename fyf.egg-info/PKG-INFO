@@ -15,6 +15,7 @@ Requires-Dist: numpy
 Requires-Dist: scipy
 Requires-Dist: astropy
 Requires-Dist: matplotlib
+Requires-Dist: click
 Requires-Dist: colorama
 Requires-Dist: scikit-image
 Requires-Dist: scikit-learn

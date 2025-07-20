@@ -24,7 +24,7 @@ try:
     from fyf.core.validation import validate_images
     from fyf.visualization.plotting import PlotGenerator
     from fyf.visualization.report import ReportGenerator
-    from fyf.config_manager import ConfigManager
+    from fyf.config.config_manager import ConfigManager
 except ImportError as e:
     click.echo(f"Error importing FYF modules: {e}", err=True)
     sys.exit(1)
