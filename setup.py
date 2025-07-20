@@ -9,6 +9,7 @@ setup(
         "scipy",
         "astropy",
         "matplotlib",
+        "click",
         "colorama",
         "scikit-image",
         "scikit-learn",
