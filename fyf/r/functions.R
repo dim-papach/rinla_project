@@ -201,7 +201,7 @@ compute_parameters <- function(valid, tx, ty, logimg, weight, tepar = NULL) {
 #'
 #' @examples
 #' mesh <- create_inla_mesh(x, y, cutoff)
-create_inla_mesh <- function(x, y, max.edge = NULL) {
+create_inla_mesh <- function(x, y, max.edge = NULL, resolution = 30) {
   if (length(x) == 0 || length(y) == 0) {
       stop("Error: Insufficient points to create a mesh.")
   }
@@ -209,15 +209,15 @@ create_inla_mesh <- function(x, y, max.edge = NULL) {
   x_range <- diff(range(x))
   y_range <- diff(range(y))
   max.range <- max(x_range, y_range)
-  
+
   # Set default max.edge if not provided
   if(is.null(max.edge)) {
     max.edge <- max.range / 10  # Default to 10% of maximum range
   }
-  
+
   # Calculate cutoff as max.edge/6 (ensuring it's ≥ 1e-5)
-  cutoff <- max(max.edge / 30, 1e-5)
-  
+  cutoff <- max(max.edge / resolution, 1e-5)
+
   # Create mesh
   mesh <- tryCatch(
     INLA::inla.mesh.2d(
@@ -227,7 +227,7 @@ create_inla_mesh <- function(x, y, max.edge = NULL) {
       offset = c(max.edge * 0.5, max.edge * 2)  # Boundary extensions
     ),
     error = function(e) stop("Mesh creation failed: ", e$message))
-  
+
   return(mesh)
 }
 
@@ -541,7 +541,7 @@ save_npy <- function(array_list, dir_path) {
     np$save(file_path, arr)
     saved_files <- c(saved_files, file_path)
   }
-  
+
   invisible(saved_files)
 }
 
@@ -584,30 +584,30 @@ compute_spatial_term <- function(projector, shape, res, xcenter, ycenter, eigens
   # Generate grid coordinates
   px <- rep(projector$x, each = length(projector$y))
   py <- rep(projector$y, length(projector$x))
-  
+
   if (shape == 'radius') {
     # Radial distance from center point
     projected <- sqrt((px - xcenter)^2 + (py - ycenter)^2)
-    term <- res$summary.fixed$mean[1] + 
-      res$summary.fixed$mean[2] * projected + 
+    term <- res$summary.fixed$mean[1] +
+      res$summary.fixed$mean[2] * projected +
       res$summary.fixed$mean[3] * projected^2
-    
+
   } else if (shape == 'ellipse') {
     # Mahalanobis distance using eigenvalue decomposition
     centered_coords <- cbind(px - xcenter, py - ycenter)
     projected <- (centered_coords %*% eigens$vectors[, 1])^2 / eigens$values[1] +
       (centered_coords %*% eigens$vectors[, 2])^2 / eigens$values[2]
-    term <- res$summary.fixed$mean[1] + 
-      res$summary.fixed$mean[2] * projected + 
+    term <- res$summary.fixed$mean[1] +
+      res$summary.fixed$mean[2] * projected +
       res$summary.fixed$mean[3] * projected^2
-    
+
   } else if (shape == 'none') {
     # Constant intercept only
     term <- res$summary.fixed$mean[1]
   } else {
     stop("Invalid shape parameter. Use 'radius', 'ellipse', or 'none'.")
   }
-  
+
   return(term)
 }
 
@@ -631,25 +631,25 @@ compute_spatial_term <- function(projector, shape, res, xcenter, ycenter, eigens
 process_validation <- function(valid, tx, ty, logimg, weight, tepar, mesh) {
   # Compute parameters using user-defined function
   params <- compute_parameters(valid, tx, ty, logimg, weight, tepar)
-  
+
   # Extract validation locations from mesh
   mim <- mesh$loc[valid, ]
-  
+
   # Create gridded observation matrix
-  timage <- matrix(NA, 
-                   nrow = length(unique(ty)), 
+  timage <- matrix(NA,
+                   nrow = length(unique(ty)),
                    ncol = length(unique(tx)))
   timage[cbind(as.numeric(factor(ty[valid])),  # Map to grid indices
                as.numeric(factor(tx[valid])))] <- params$par
-  
+
   # Create error matrix if available
   terrimage <- if (!is.null(params$epar)) {
     matrix(NA, nrow = length(unique(ty)), ncol = length(unique(tx)))
-    terrimage[cbind(as.numeric(factor(ty[valid])), 
+    terrimage[cbind(as.numeric(factor(ty[valid])),
                     as.numeric(factor(tx[valid])))] <- sqrt(params$epar)
     terrimage
   } else NULL
-  
+
   list(
     timage = timage,
     terrimage = terrimage,
@@ -693,34 +693,34 @@ process_validation <- function(valid, tx, ty, logimg, weight, tepar, mesh) {
 #' # With validation data
 #' val_results <- project_inla_results_collect(mesh, res, 0, 10, 0, 10, 100, 100, 2, 'radius',
 #'                                            valid = val_indices, tx = xcoords, ty = ycoords)
-project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsize, ysize, zoom, 
-                                         shape, xcenter, ycenter, eigens, spde, valid = NULL, 
-                                         tx = NULL, ty = NULL, logimg = NULL, weight = NULL, 
+project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsize, ysize, zoom,
+                                         shape, xcenter, ycenter, eigens, spde, valid = NULL,
+                                         tx = NULL, ty = NULL, logimg = NULL, weight = NULL,
                                          tepar = NULL) {
   if (is.null(mesh) || is.null(res)) {
       stop("Error: Mesh and result inputs cannot be NULL.")
   }
   # 1. Initialize projection grid
   projector <- create_projector(mesh, c(xini, xfin), c(yini, yfin), zoom, xsize, ysize)
-  
+
   # 2. Adjust center coordinates if validation data provided
   if (!is.null(valid)) {
     params <- compute_parameters(valid, tx, ty, logimg, weight, tepar)
     xcenter <- params$xcenter
     ycenter <- params$ycenter
   }
-  
+
   # 3. Calculate spatial trend component
   spatial_term <- compute_spatial_term(projector, shape, res, xcenter, ycenter, eigens)
-  
+
   # 4. Project random effects and combine with trend
   random_effects <- inla.mesh.project(projector, res$summary.random$i$mean)
-  output <- (random_effects) + 
+  output <- (random_effects) +
    t(matrix(spatial_term, nrow = zoom * (ysize), ncol = zoom * (xsize)))
-  
+
   # 5. Project standard deviations
   outputsd <- inla.mesh.project(projector, res$summary.random$i$sd)
-  
+
   # 6. Process validation data if provided
   validation_data <- if (!is.null(valid)) {
     process_validation(valid, tx, ty, logimg, weight, tepar, mesh)
@@ -736,7 +736,7 @@ project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsiz
     }
   }
   else {print("empty")}
-  
+
   # 8. Return comprehensive results
   list(
     out = t(output),

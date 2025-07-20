@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from astropy.io import fits
 import numpy as np
-from fyf.core.visualization.plotting import PlotGenerator
+from fyf.visualization.plotting import PlotGenerator
 
 def process_fits_pipeline(output_dir: Path):
     """
