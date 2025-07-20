@@ -15,7 +15,7 @@ from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotCon
 from fyf.core.data.file_handler import FileHandler
 from fyf.core.data.masking import MaskGenerator
 from fyf.core.processing.fits_processor import FitsProcessor
-from fyf.core.visualization.plotting import PlotGenerator
+from fyf.visualization.plotting import PlotGenerator
 from fyf.core.validation import validate_images
 
 

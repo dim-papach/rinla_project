@@ -22,8 +22,8 @@ try:
     from fyf.core.processing.fits_processor import FitsProcessor
     from fyf.core.data.file_handler import FileHandler
     from fyf.core.validation import validate_images
-    from fyf.core.visualization.plotting import PlotGenerator
-    from fyf.core.visualization.report import ReportGenerator
+    from fyf.visualization.plotting import PlotGenerator
+    from fyf.visualization.report import ReportGenerator
     from fyf.config.config_manager import ConfigManager
 except ImportError as e:
     click.echo(f"Error importing FYF modules: {e}", err=True)
@@ -453,7 +453,7 @@ def validate(ctx, original, processed, config, output_dir, plot, metrics):
         
         # Generate plots if requested
         if generate_plots:
-            from fyf.core.visualization.plotting import PlotGenerator
+            from fyf.visualization.plotting import PlotGenerator
             
             plot_gen = PlotGenerator()
             plot_dir = output_dir / "plots" 
@@ -538,7 +538,7 @@ def plot(ctx, original, processed, config, plot_type, output_dir, dpi, cmap, res
         )
         
         # Use existing PlotGenerator
-        from fyf.core.visualization.plotting import PlotGenerator
+        from fyf.visualization.plotting import PlotGenerator
         plot_gen = PlotGenerator(
             cmap=plot_cfg.cmap,
             dpi=plot_cfg.dpi,

@@ -17,7 +17,7 @@ from typing import List, Dict, Any, Optional
 
 from fyf.config.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
 from fyf.pipeline import SimulationPipeline
-from fyf.core.visualization.report import ReportGenerator
+from fyf.visualization.report import ReportGenerator
 
 def parse_args():
     """Parse command line arguments"""

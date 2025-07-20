@@ -6,8 +6,8 @@ This module provides tools for visualizing data:
 - Report generation for creating HTML reports
 """
 
-from fyf.core.visualization.plotting import PlotGenerator, InvalidDataError
-from fyf.core.visualization.report import ReportGenerator
+from fyf.visualization.plotting import PlotGenerator, InvalidDataError
+from fyf.visualization.report import ReportGenerator
 
 __all__ = [
     "PlotGenerator",
