@@ -234,7 +234,7 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
             echo_colored(f"Report error: {e}", Colors.ERROR)
 
 @cli.command()
-@click.argument('files', nargs=-1, required=True, callback=validate_fits_files)
+@click.argument('files', nargs=-1, required=True)  # Remove the callback
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
 @click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
 @click.option('--scaling', '-s', is_flag=True, help='Enable log10 scaling')
@@ -243,6 +243,28 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 def process(ctx, files, config, shape, scaling, output_dir):
     """Process FITS images with INLA to fill missing data (NaN values)"""
     echo_banner("FYF Processing")
+    
+    # Debug: Check what files contains
+    echo_colored(f"Debug: files parameter = {files}", Colors.INFO)
+    echo_colored(f"Debug: type(files) = {type(files)}", Colors.INFO)
+    
+    # Manual validation of files (instead of using callback)
+    validated_files = []
+    for file_pattern in files:
+        echo_colored(f"Debug: Processing file pattern: {file_pattern}", Colors.INFO)
+        
+        file_path = Path(file_pattern)
+        if file_path.exists() and file_path.suffix.lower() in ['.fits', '.fit']:
+            validated_files.append(file_path)
+            echo_colored(f"Debug: Added valid file: {file_path}", Colors.SUCCESS)
+        else:
+            echo_colored(f"Debug: Skipping invalid file: {file_path}", Colors.WARNING)
+    
+    if not validated_files:
+        echo_colored("Error: No valid FITS files found", Colors.ERROR)
+        return
+    
+    echo_colored(f"Debug: Processing {len(validated_files)} files", Colors.INFO)
     
     # Check if R-INLA is available
     try:
@@ -288,8 +310,42 @@ def process(ctx, files, config, shape, scaling, output_dir):
     echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
     echo_colored(f"Output directory: {output_dir}", Colors.INFO)
     
-    # Process files
-    with click.progressbar(files, label='Processing') as bar:
+    # Get the correct path to the R script using modern approach
+    try:
+        # Modern approach using importlib.resources (Python 3.9+)
+        try:
+            from importlib.resources import files
+            r_scripts = files('fyf') / 'r'
+            inla_script_path = str(r_scripts / 'INLA_pipeline.R')
+        except ImportError:
+            # Fallback for older Python versions using importlib_resources
+            try:
+                import importlib_resources
+                r_scripts = importlib_resources.files('fyf') / 'r'
+                inla_script_path = str(r_scripts / 'INLA_pipeline.R')
+            except ImportError:
+                # Last resort: use pkg_resources (but suppress the warning)
+                import warnings
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=UserWarning, module=".*pkg_resources.*")
+                    import pkg_resources
+                    inla_script_path = pkg_resources.resource_filename('fyf', 'r/INLA_pipeline.R')
+        
+        if not os.path.exists(inla_script_path):
+            raise FileNotFoundError(f"R script not found: {inla_script_path}")
+            
+    except (ImportError, FileNotFoundError):
+        # Fallback: try relative path (for development)
+        inla_script_path = "fyf/r/INLA_pipeline.R"
+        if not os.path.exists(inla_script_path):
+            echo_colored("Error: R script not found. Make sure FYF is properly installed with R scripts.", Colors.ERROR)
+            echo_colored("Try reinstalling: pip install --force-reinstall .", Colors.INFO)
+            return
+    
+    echo_colored(f"Using R script: {inla_script_path}", Colors.INFO)
+    
+    # Process files using the validated_files list
+    with click.progressbar(validated_files, label='Processing') as bar:
         for file_path in bar:
             try:
                 # Load FITS data
@@ -307,8 +363,8 @@ def process(ctx, files, config, shape, scaling, output_dir):
                 with open(path_file, "w") as f:
                     f.write(input_path)
                 
-                # Build command with INLA config params
-                cmd = ["Rscript", "fyf/r/INLA_pipeline.R"]
+                # Build R script command
+                cmd = ["Rscript", inla_script_path]
                 
                 # Add INLA configuration parameters
                 if inla_cfg.shape != "none":
@@ -324,8 +380,18 @@ def process(ctx, files, config, shape, scaling, output_dir):
                 if inla_cfg.nonstationary:
                     cmd.append("--nonstationary")
                 
-                # Run R script
-                subprocess.run(cmd, check=True)
+                ## Run R script
+                # Set up environment for R script
+                env = os.environ.copy()
+
+                # Pass the current Python executable to R
+                env["RETICULATE_PYTHON"] = sys.executable
+
+                # Also set the FYF output directory
+                env["FYF_OUTPUT_DIR"] = str(file_output_dir)
+
+                # Run R script with the correct environment
+                subprocess.run(cmd, check=True, env=env)
                 
                 # Look for output in standard output location
                 output_path = f"INLA_output_NPY/{basename}/out.npy"
@@ -368,8 +434,7 @@ def process(ctx, files, config, shape, scaling, output_dir):
                         os.remove(path_file)
                 except Exception as cleanup_e:
                     echo_colored(f"Warning: Cleanup failed: {cleanup_e}", Colors.WARNING)
-                    
-                    
+                
 # Validate command  
 @cli.command()
 @click.argument('original', type=click.Path(exists=True))
