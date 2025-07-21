@@ -4,6 +4,12 @@ setup(
     name="fyf",
     version="0.1.0",
     packages=find_packages(),
+    
+        package_data={
+        'fyf': ['r/*.R', 'scripts/*.R', 'scripts/*.sh'],  # Include R scripts
+        },
+        include_package_data=True,  # Include files specified in MANIFEST.in if it exists
+        
     install_requires=[
         "numpy",
         "scipy",
@@ -13,6 +19,7 @@ setup(
         "colorama",
         "scikit-image",
         "scikit-learn",
+        "setuptools",
     ],
     entry_points={
         "console_scripts": [
