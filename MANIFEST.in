@@ -1,0 +1,23 @@
+# Include R scripts
+recursive-include fyf/r *.R
+recursive-include fyf/scripts *.R *.sh
+
+# Include documentation
+include README.md
+include LICENSE
+
+# Include configuration files
+include *.json *.yaml *.yml *.toml
+
+# Include other important files
+include CMakeLists.txt
+include setup.py
+
+# Exclude build artifacts and cache
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude __pycache__/*
+global-exclude .git/*
+global-exclude build/*
+global-exclude dist/*
+global-exclude *.egg-info/*
