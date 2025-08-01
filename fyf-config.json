@@ -15,9 +15,23 @@
     "mesh_cutoff": null,
     "tolerance": 0.0001,
     "restart": 0,
-    "scaling": false,
-    "nonstationary": false,
-    "output_dir": "./processed"
+    "scaling": true,
+    "nonstationary": true,
+    "output_dir": "./processed",
+    "mesh_resolution": 30,
+    "max_edge_factor": 10.0,
+    "outer_edge_factor": 1.5,
+    "offset_inner_factor": 0.5,
+    "offset_outer_factor": 2.0,
+    "alpha": 2,
+    "prior_range_prob": 0.2,
+    "prior_range_lower": 2.0,
+    "prior_sigma_prob": 0.2,
+    "prior_sigma_upper": 2.0,
+    "num_threads": 6,
+    "openmp_strategy": "huge",
+    "nbasis": 2,
+    "spline_degree": 10
   },
   "validate": {
     "metrics": [

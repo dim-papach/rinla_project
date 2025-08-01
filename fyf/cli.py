@@ -238,9 +238,31 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
 @click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
 @click.option('--scaling', '-s', is_flag=True, help='Enable log10 scaling')
+@click.option('--nonstationary', is_flag=True, help='Enable non-stationary model')
 @click.option('--output-dir', '-o', type=Path, help='Output directory')
+@click.option('--mesh-cutoff', type=float, help='Minimum distance between mesh points')
+@click.option('--mesh-resolution', type=int, help='Mesh resolution factor')
+@click.option('--max-edge-factor', type=float, help='Max edge factor for mesh')
+@click.option('--outer-edge-factor', type=float, help='Outer edge factor for mesh')
+@click.option('--offset-inner-factor', type=float, help='Inner offset factor for mesh')
+@click.option('--offset-outer-factor', type=float, help='Outer offset factor for mesh')
+@click.option('--alpha', type=int, help='SPDE smoothness parameter (1 or 2)')
+@click.option('--prior-range-prob', type=float, help='Prior probability for range parameter')
+@click.option('--prior-range-lower', type=float, help='Lower bound for range prior')
+@click.option('--prior-sigma-prob', type=float, help='Prior probability for sigma parameter')
+@click.option('--prior-sigma-upper', type=float, help='Upper bound for sigma prior')
+@click.option('--num-threads', type=int, help='Number of CPU threads')
+@click.option('--openmp-strategy', type=click.Choice(['small', 'medium', 'large', 'huge']), help='OpenMP strategy')
+@click.option('--nbasis', type=int, help='Number of basis functions for non-stationary model')
+@click.option('--spline-degree', type=int, help='Degree of B-spline basis functions')
+@click.option('--tolerance', type=float, help='INLA convergence tolerance')
+@click.option('--restart', type=int, help='Number of INLA restarts')
 @click.pass_context
-def process(ctx, files, config, shape, scaling, output_dir):
+def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
+            mesh_cutoff, mesh_resolution, max_edge_factor, outer_edge_factor,
+            offset_inner_factor, offset_outer_factor, alpha, prior_range_prob,
+            prior_range_lower, prior_sigma_prob, prior_sigma_upper, num_threads,
+            openmp_strategy, nbasis, spline_degree, tolerance, restart):
     """Process FITS images with INLA to fill missing data (NaN values)"""
     echo_banner("FYF Processing")
     
@@ -283,15 +305,32 @@ def process(ctx, files, config, shape, scaling, output_dir):
     cli_args = {
         'shape': shape,
         'scaling': scaling,
+        'nonstationary': nonstationary,
+        'mesh_cutoff': mesh_cutoff,
+        'mesh_resolution': mesh_resolution,
+        'max_edge_factor': max_edge_factor,
+        'outer_edge_factor': outer_edge_factor,
+        'offset_inner_factor': offset_inner_factor,
+        'offset_outer_factor': offset_outer_factor,
+        'alpha': alpha,
+        'prior_range_prob': prior_range_prob,
+        'prior_range_lower': prior_range_lower,
+        'prior_sigma_prob': prior_sigma_prob,
+        'prior_sigma_upper': prior_sigma_upper,
+        'num_threads': num_threads,
+        'openmp_strategy': openmp_strategy,
+        'nbasis': nbasis,
+        'spline_degree': spline_degree,
+        'tolerance': tolerance,
+        'restart': restart,
         'output_dir': str(output_dir) if output_dir else None
-    }
-    
+    } 
     process_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args)
     
     # Create INLA configuration
     inla_cfg = INLAConfig(
         shape=process_config.get('shape', 'none'),
-        scaling=process_config.get('scaling', False)
+        scaling=process_config.get('scaling', True)
     )
     
     # Set output directory
