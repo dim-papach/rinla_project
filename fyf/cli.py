@@ -326,13 +326,17 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
         'output_dir': str(output_dir) if output_dir else None
     } 
     process_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args)
-    
+    merged_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args) 
+    # Option 1: Update the original config_data
+    config_data['process'] = merged_config
+    cosmic_cfg, satellite_cfg, inla_cfg, plot_cfg = ConfigManager.create_configs_from_dict(config_data)
+
+    # Option 2: Create new dict with just the process section
+    # cosmic_cfg, satellite_cfg, inla_cfg, plot_cfg = ConfigManager.create_configs_from_dict({
+    #     'process': merged_config
+    # })    
     # Create INLA configuration
-    inla_cfg = INLAConfig(
-        shape=process_config.get('shape', 'none'),
-        scaling=process_config.get('scaling', True)
-    )
-    
+    #cosmic_cfg, satellite_cfg, inla_cfg, plot_cfg = ConfigManager.create_configs_from_dict(config_data)
     # Set output directory
     output_dir = Path(process_config.get('output_dir', './processed'))
     
