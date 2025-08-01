@@ -31,14 +31,38 @@ class ConfigManager:
                 "output_dir": "./output"
             },
             "process": {
+                # Basic INLA parameters
                 "shape": "none",
                 "mesh_cutoff": None,
                 "tolerance": 1e-4,
                 "restart": 0,
                 "scaling": False,
                 "nonstationary": False,
-                "output_dir": "./processed"
+                "output_dir": "./processed",
+                
+                # Mesh parameters
+                "mesh_resolution": 30,
+                "max_edge_factor": 10.0,
+                "outer_edge_factor": 1.5,
+                "offset_inner_factor": 0.5,
+                "offset_outer_factor": 2.0,
+                
+                # SPDE parameters
+                "alpha": 2,
+                "prior_range_prob": 0.2,
+                "prior_range_lower": 2.0,
+                "prior_sigma_prob": 0.2,
+                "prior_sigma_upper": 2.0,
+                
+                # Computation parameters
+                "num_threads": 6,
+                "openmp_strategy": "huge",
+                
+                # Non-stationary parameters
+                "nbasis": 2,
+                "spline_degree": 10
             },
+            
             "validate": {
                 "metrics": ["ssim", "mse", "mae"],
                 "generate_plots": True,
@@ -119,12 +143,35 @@ class ConfigManager:
         )
         
         inla_cfg = INLAConfig(
+            # Basic parameters
             shape=process_cfg.get("shape", "none"),
             mesh_cutoff=process_cfg.get("mesh_cutoff", None),
             tolerance=process_cfg.get("tolerance", 1e-4),
             restart=process_cfg.get("restart", 0),
             scaling=process_cfg.get("scaling", False),
-            nonstationary=process_cfg.get("nonstationary", False)
+            nonstationary=process_cfg.get("nonstationary", False),
+            
+            # Mesh parameters
+            mesh_resolution=process_cfg.get("mesh_resolution", 30),
+            max_edge_factor=process_cfg.get("max_edge_factor", 10.0),
+            outer_edge_factor=process_cfg.get("outer_edge_factor", 1.5),
+            offset_inner_factor=process_cfg.get("offset_inner_factor", 0.5),
+            offset_outer_factor=process_cfg.get("offset_outer_factor", 2.0),
+            
+            # SPDE parameters
+            alpha=process_cfg.get("alpha", 2),
+            prior_range_prob=process_cfg.get("prior_range_prob", 0.2),
+            prior_range_lower=process_cfg.get("prior_range_lower", 2.0),
+            prior_sigma_prob=process_cfg.get("prior_sigma_prob", 0.2),
+            prior_sigma_upper=process_cfg.get("prior_sigma_upper", 2.0),
+            
+            # Computation parameters
+            num_threads=process_cfg.get("num_threads", 6),
+            openmp_strategy=process_cfg.get("openmp_strategy", "huge"),
+            
+            # Non-stationary parameters
+            nbasis=process_cfg.get("nbasis", 2),
+            spline_degree=process_cfg.get("spline_degree", 10)
         )
         
         plot_config = PlotConfig(
