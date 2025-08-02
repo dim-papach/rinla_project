@@ -352,7 +352,9 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
     echo_colored(f"INLA shape: {inla_cfg.shape}", Colors.INFO)
     echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
     echo_colored(f"Output directory: {output_dir}", Colors.INFO)
-    
+    # Debug: Check what's in inla_cfg
+    echo_colored(f"DEBUG: inla_cfg.scaling = {inla_cfg.scaling}", Colors.ERROR)
+    echo_colored(f"DEBUG: inla_cfg.nonstationary = {inla_cfg.nonstationary}", Colors.ERROR)
     # Get the correct path to the R script using modern approach
     try:
         # Modern approach using importlib.resources (Python 3.9+)
