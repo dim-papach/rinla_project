@@ -62,7 +62,7 @@ class ConfigManager:
                 "nbasis": 2,
                 "spline_degree": 10
             },
-            
+
             "validate": {
                 "metrics": ["ssim", "mse", "mae"],
                 "generate_plots": True,
@@ -120,7 +120,7 @@ class ConfigManager:
                 config[command][key] = value
         
         return config[command]
-    
+
     @staticmethod
     def create_configs_from_dict(config_dict: Dict[str, Any]) -> tuple:
         """Create configuration objects from dictionary"""
@@ -148,8 +148,8 @@ class ConfigManager:
             mesh_cutoff=process_cfg.get("mesh_cutoff", None),
             tolerance=process_cfg.get("tolerance", 1e-4),
             restart=process_cfg.get("restart", 0),
-            scaling=process_cfg.get("scaling", False),
-            nonstationary=process_cfg.get("nonstationary", False),
+            scaling=bool(process_cfg.get("scaling", False)),
+            nonstationary=bool(process_cfg.get("nonstationary", False)),
             
             # Mesh parameters
             mesh_resolution=process_cfg.get("mesh_resolution", 30),
