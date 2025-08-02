@@ -14,13 +14,13 @@ option_list <- list(
   # Basic parameters
   make_option("--shape", type="character", default="none", 
               help="Shape parameter: none, radius, or ellipse [default: %default]"),
-  make_option("--scaling", action="store_true", default=FALSE,
+  make_option("--scaling",type = "logical", action="store_true", default=TRUE,
               help="Enable log10 scaling [default: %default]"),
   make_option("--tolerance", type="double", default=1e-4,
               help="INLA convergence tolerance [default: %default]"),
   make_option("--restart", type="integer", default=0L,
               help="Number of INLA restarts [default: %default]"),
-  make_option("--nonstationary", action="store_true", default=FALSE,
+  make_option("--nonstationary",type = "logical" ,action="store_true", default = TRUE,
               help="Use non-stationary SPDE model [default: %default]"),
               
   # Mesh parameters
