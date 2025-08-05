@@ -289,6 +289,7 @@ add_custom_target(install-system-deps
     COMMAND sudo apt install -y build-essential cmake pkg-config 
     COMMAND sudo apt install -y python3-dev python3-pip r-base-dev
     COMMAND sudo apt install -y libudunits2-dev libgdal-dev libgeos-dev libproj-dev libsqlite3-dev
+    COMMAND sudo apt install -y gdal-bin proj-bin libgdal-dev libproj-dev r-cran-rgdal
     COMMAND sudo apt install -y libssl-dev libxml2-dev libcurl4-openssl-dev zlib1g-dev 
     COMMAND sudo apt install -y libfontconfig1-dev libharfbuzz-dev libfribidi-dev libabsl-dev
     COMMAND ${CMAKE_COMMAND} -E echo "System dependencies installation complete!"
@@ -329,6 +330,7 @@ install_if_missing <- function(pkg) {
 packages <- c(
     #'systemfonts', # Required for textshaping
     'sf',          # Simple features for R
+    'reshape2',   # Data reshaping
     'optparse',    # Command line parsing  
     'reticulate',  # Python interface
     'remotes',     # Package installation
