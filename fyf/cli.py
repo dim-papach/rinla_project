@@ -263,32 +263,25 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
             offset_inner_factor, offset_outer_factor, alpha, prior_range_prob,
             prior_range_lower, prior_sigma_prob, prior_sigma_upper, num_threads,
             openmp_strategy, nbasis, spline_degree, tolerance, restart):
-    """Process FITS images with INLA to fill missing data (NaN values)"""
+    """Process FITS images with INLA to fill missing data"""
     echo_banner("FYF Processing")
     
-    # Debug: Check what files contains
-    echo_colored(f"Debug: files parameter = {files}", Colors.INFO)
-    echo_colored(f"Debug: type(files) = {type(files)}", Colors.INFO)
-    
-    # Manual validation of files (instead of using callback)
+    # Manual validation of files
     validated_files = []
     for file_pattern in files:
-        echo_colored(f"Debug: Processing file pattern: {file_pattern}", Colors.INFO)
-        
         file_path = Path(file_pattern)
         if file_path.exists() and file_path.suffix.lower() in ['.fits', '.fit']:
             validated_files.append(file_path)
-            echo_colored(f"Debug: Added valid file: {file_path}", Colors.SUCCESS)
         else:
-            echo_colored(f"Debug: Skipping invalid file: {file_path}", Colors.WARNING)
+            echo_colored(f"Warning: Skipping invalid file: {file_path}", Colors.WARNING)
     
     if not validated_files:
         echo_colored("Error: No valid FITS files found", Colors.ERROR)
         return
     
-    echo_colored(f"Debug: Processing {len(validated_files)} files", Colors.INFO)
+    echo_colored(f"Processing {len(validated_files)} files", Colors.INFO)
     
-    # Check if R-INLA is available
+    # Check R-INLA availability
     try:
         from fyf.r import check_inla_installed
         if not check_inla_installed():
@@ -324,161 +317,61 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
         'tolerance': tolerance,
         'restart': restart,
         'output_dir': str(output_dir) if output_dir else None
-    } 
+    }
+    
     process_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args)
-    merged_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args) 
-    # Option 1: Update the original config_data
-    config_data['process'] = merged_config
-    cosmic_cfg, satellite_cfg, inla_cfg, plot_cfg = ConfigManager.create_configs_from_dict(config_data)
-
-    # Option 2: Create new dict with just the process section
-    # cosmic_cfg, satellite_cfg, inla_cfg, plot_cfg = ConfigManager.create_configs_from_dict({
-    #     'process': merged_config
-    # })    
+    
     # Create INLA configuration
-    #cosmic_cfg, satellite_cfg, inla_cfg, plot_cfg = ConfigManager.create_configs_from_dict(config_data)
+    inla_cfg = INLAConfig(
+        shape=process_config.get('shape', 'none'),
+        scaling=process_config.get('scaling', False),
+        nonstationary=process_config.get('nonstationary', False),
+        mesh_cutoff=process_config.get('mesh_cutoff', None),
+        mesh_resolution=process_config.get('mesh_resolution', 30),
+        max_edge_factor=process_config.get('max_edge_factor', 10.0),
+        outer_edge_factor=process_config.get('outer_edge_factor', 1.5),
+        offset_inner_factor=process_config.get('offset_inner_factor', 0.5),
+        offset_outer_factor=process_config.get('offset_outer_factor', 2.0),
+        alpha=process_config.get('alpha', 2),
+        prior_range_prob=process_config.get('prior_range_prob', 0.2),
+        prior_range_lower=process_config.get('prior_range_lower', 2.0),
+        prior_sigma_prob=process_config.get('prior_sigma_prob', 0.2),
+        prior_sigma_upper=process_config.get('prior_sigma_upper', 2.0),
+        num_threads=process_config.get('num_threads', 6),
+        openmp_strategy=process_config.get('openmp_strategy', 'huge'),
+        nbasis=process_config.get('nbasis', 2),
+        spline_degree=process_config.get('spline_degree', 10),
+        tolerance=process_config.get('tolerance', 1e-4),
+        restart=process_config.get('restart', 0)
+    )
+    
     # Set output directory
     output_dir = Path(process_config.get('output_dir', './processed'))
-    
-    # Initialize components
-    file_handler = FileHandler()
-    
-    # Create temp directory for processing
-    os.makedirs("variants", exist_ok=True)
-    
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Display configuration
     echo_colored(f"INLA shape: {inla_cfg.shape}", Colors.INFO)
     echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
     echo_colored(f"Output directory: {output_dir}", Colors.INFO)
-    # Debug: Check what's in inla_cfg
-    echo_colored(f"DEBUG: inla_cfg.scaling = {inla_cfg.scaling}", Colors.ERROR)
-    echo_colored(f"DEBUG: inla_cfg.nonstationary = {inla_cfg.nonstationary}", Colors.ERROR)
-    # Get the correct path to the R script using modern approach
-    try:
-        # Modern approach using importlib.resources (Python 3.9+)
-        try:
-            from importlib.resources import files
-            r_scripts = files('fyf') / 'r'
-            inla_script_path = str(r_scripts / 'INLA_pipeline.R')
-        except ImportError:
-            # Fallback for older Python versions using importlib_resources
-            try:
-                import importlib_resources
-                r_scripts = importlib_resources.files('fyf') / 'r'
-                inla_script_path = str(r_scripts / 'INLA_pipeline.R')
-            except ImportError:
-                # Last resort: use pkg_resources (but suppress the warning)
-                import warnings
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=UserWarning, module=".*pkg_resources.*")
-                    import pkg_resources
-                    inla_script_path = pkg_resources.resource_filename('fyf', 'r/INLA_pipeline.R')
-        
-        if not os.path.exists(inla_script_path):
-            raise FileNotFoundError(f"R script not found: {inla_script_path}")
-            
-    except (ImportError, FileNotFoundError):
-        # Fallback: try relative path (for development)
-        inla_script_path = "fyf/r/INLA_pipeline.R"
-        if not os.path.exists(inla_script_path):
-            echo_colored("Error: R script not found. Make sure FYF is properly installed with R scripts.", Colors.ERROR)
-            echo_colored("Try reinstalling: pip install --force-reinstall .", Colors.INFO)
-            return
     
-    echo_colored(f"Using R script: {inla_script_path}", Colors.INFO)
-    
-    # Process files using the validated_files list
+    # Initialize file handler and processor
+    file_handler = FileHandler()
+    processor = FitsProcessor(CosmicConfig(fraction=0.0), SatelliteConfig(num_trails=0, trail_width=1))
+
+    # Process files using FitsProcessor
     with click.progressbar(validated_files, label='Processing') as bar:
         for file_path in bar:
             try:
-                # Load FITS data
                 data, header = file_handler.load_fits(file_path)
-                basename = file_path.stem
-                file_output_dir = output_dir / basename
-                file_output_dir.mkdir(parents=True, exist_ok=True)
+                variants = {'original': data}
+                processed = processor.process_variants(variants, inla_cfg, str(output_dir))
                 
-                # Save data as NPY file in variants directory
-                input_path = f"variants/{basename}.npy"
-                np.save(input_path, data)
-                
-                # Save path to NPY file in path.txt
-                path_file = f"variants/path.txt"
-                with open(path_file, "w") as f:
-                    f.write(input_path)
-                
-                # Build R script command
-                cmd = ["Rscript", inla_script_path]
-                
-                # Add INLA configuration parameters
-                if inla_cfg.shape != "none":
-                    cmd.extend(["--shape", inla_cfg.shape])
-                if inla_cfg.mesh_cutoff is not None:
-                    cmd.extend(["--mesh-cutoff", str(inla_cfg.mesh_cutoff)])
-                if inla_cfg.tolerance != 1e-4:
-                    cmd.extend(["--tolerance", str(inla_cfg.tolerance)])
-                if inla_cfg.restart != 0:
-                    cmd.extend(["--restart", str(inla_cfg.restart)])
-                if inla_cfg.scaling:
-                    cmd.append("--scaling")
-                if inla_cfg.nonstationary:
-                    cmd.append("--nonstationary")
-                
-                ## Run R script
-                # Set up environment for R script
-                env = os.environ.copy()
-
-                # Pass the current Python executable to R
-                env["RETICULATE_PYTHON"] = sys.executable
-
-                # Also set the FYF output directory
-                env["FYF_OUTPUT_DIR"] = str(file_output_dir)
-
-                # Run R script with the correct environment
-                subprocess.run(cmd, check=True, env=env)
-                
-                # Look for output in standard output location
-                output_path = f"INLA_output_NPY/{basename}/out.npy"
-                if os.path.exists(output_path):
-                    # Load processed result
-                    processed_data = np.load(output_path)
-                    
-                    # Save as FITS file
-                    from astropy.io import fits
-                    fits.writeto(
-                        file_output_dir / 'processed.fits', 
-                        processed_data, 
-                        header, 
-                        overwrite=True
-                    )
-                    
-                    # Also save standard deviation if available
-                    uncertainty_path = f"INLA_output_NPY/{basename}/outsd.npy"
-                    if os.path.exists(uncertainty_path):
-                        uncertainty_data = np.load(uncertainty_path)
-                        fits.writeto(
-                            file_output_dir / 'uncertainty.fits', 
-                            uncertainty_data, 
-                            header, 
-                            overwrite=True
-                        )
-                    
-                    echo_colored(f"✓ {file_path.name}", Colors.SUCCESS)
+                if processed.get('original') is not None:
+                    echo_colored(f"✓ {file_path.name}: Success", Colors.SUCCESS)
                 else:
-                    echo_colored(f"✗ {file_path.name}: Output not found at {output_path}", Colors.ERROR)
-                    
+                    echo_colored(f"✗ {file_path.name}: Failed", Colors.ERROR)
             except Exception as e:
                 echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
-            finally:
-                # Clean up temporary files
-                try:
-                    if 'input_path' in locals() and os.path.exists(input_path):
-                        os.remove(input_path)
-                    if 'path_file' in locals() and os.path.exists(path_file):
-                        os.remove(path_file)
-                except Exception as cleanup_e:
-                    echo_colored(f"Warning: Cleanup failed: {cleanup_e}", Colors.WARNING)
                 
 # Validate command  
 @cli.command()

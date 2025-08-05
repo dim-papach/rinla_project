@@ -175,6 +175,31 @@ class FitsProcessor:
         
         print("Masked variants deletion completed.")
 
+    def _build_inla_command(self, inla_script_path: str, inla_config: INLAConfig, path_file: str) -> list:
+        """Build R script command with all INLA configuration parameters"""
+        cmd = ["Rscript", str(inla_script_path)]
+        
+        # Get default config for comparison
+        default_config = INLAConfig()
+        
+        cmd.extend(["--path-file", path_file])
+        # Iterate through all config attributes
+        for attr_name in dir(inla_config):
+            if not attr_name.startswith('_'):  # Skip private attributes
+                value = getattr(inla_config, attr_name)
+                default_value = getattr(default_config, attr_name)
+                
+                # Only add if different from default
+                if value != default_value and value is not None:
+                    param_name = f"--{attr_name.replace('_', '-')}"
+                    
+                    if isinstance(value, bool):
+                        if value:  # Only add flag if True
+                            cmd.append(param_name)
+                    else:
+                        cmd.extend([param_name, str(value)])
+        
+        return cmd
     
     def process_variants(self,
                     variants: Dict[str, np.ndarray],
@@ -190,6 +215,9 @@ class FitsProcessor:
         Returns:
             Dictionary of processed arrays with same keys as input
         """
+
+
+        
         # Use absolute paths
         variants_dir = VARIANTS_DIR
         output_dir = os.path.abspath(output_dir)
@@ -235,27 +263,10 @@ class FitsProcessor:
                 # 2. Save the input path to a text file with absolute path
                 path_file = os.path.join(variants_dir, "path.txt")
                 with open(path_file, "w") as f:
-                    f.write(input_path)
+                    f.write(os.path.abspath(input_path)+"\n")
                 print(f"Debug: Saved path file to {path_file}")
                 
-                # 3. Build R script command with INLA config and absolute path
-                cmd = ["Rscript", str(inla_script_path)]
-                
-                # Add INLA configuration parameters if provided
-                if inla_config:
-                    print("Debug: Adding INLA config to command")
-                    if inla_config.shape != "none":
-                        cmd.extend(["--shape", inla_config.shape])
-                    if inla_config.mesh_cutoff is not None:
-                        cmd.extend(["--mesh-cutoff", str(inla_config.mesh_cutoff)])
-                    if inla_config.tolerance != 1e-4:
-                        cmd.extend(["--tolerance", str(inla_config.tolerance)])
-                    if inla_config.restart != 0:
-                        cmd.extend(["--restart", str(inla_config.restart)])
-                    if inla_config.scaling:
-                        cmd.append("--scaling")
-                    if inla_config.nonstationary:
-                        cmd.append("--nonstationary")
+                cmd = self._build_inla_command(inla_script_path, inla_config or INLAConfig(), path_file)
                 
                 print(f"Debug: R script command: {' '.join(cmd)}")
 
@@ -269,6 +280,9 @@ class FitsProcessor:
                     # Set environment variable to tell the R script where to save output
                     env = os.environ.copy()
                     env["FYF_OUTPUT_DIR"] = variant_output_dir
+                    
+                    import sys
+                    env["RETICULATE_PYTHON"] = sys.executable
                     
                     subprocess.run(cmd, check=True, env=env)
                     print(f"Debug: R script executed successfully")

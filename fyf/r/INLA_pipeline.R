@@ -12,6 +12,8 @@ cat("Debug: Loaded required libraries\n")
 # ========== COMMAND LINE ARGUMENT PARSING ==========
 option_list <- list(
   # Basic parameters
+  make_option("--path-file", type="character", default="/tmp/fyf_variants/path.txt",
+            help="Path to the file containing NPY path"),
   make_option("--shape", type="character", default="none", 
               help="Shape parameter: none, radius, or ellipse [default: %default]"),
   make_option("--scaling",type = "logical", action="store_true", default=TRUE,
@@ -20,7 +22,7 @@ option_list <- list(
               help="INLA convergence tolerance [default: %default]"),
   make_option("--restart", type="integer", default=0L,
               help="Number of INLA restarts [default: %default]"),
-  make_option("--nonstationary",type = "logical" ,action="store_true", default = TRUE,
+  make_option("--nonstationary",type = "logical" ,action="store_true", default = FALSE,
               help="Use non-stationary SPDE model [default: %default]"),
               
   # Mesh parameters
@@ -56,7 +58,7 @@ option_list <- list(
   # Non-stationary parameters
   make_option("--nbasis", type="integer", default=2L,
               help="Number of basis functions for non-stationary model [default: %default]"),
-  make_option("--spline-degree", type="integer", default=10L,
+  make_option("--spline-degree", type="integer", default=2L,
               help="Degree of B-spline basis functions [default: %default]")
 )
 
@@ -66,6 +68,7 @@ opts <- parse_args(opt_parser)
 
 # Set INLA options based on parsed arguments
 inla.setOption(num.threads = opts$`num-threads`)
+inla.setOption(blas.num.threads = opts$`num-threads`)
 
 # Display configuration
 cat("=== INLA CONFIGURATION ===\n")
@@ -85,9 +88,17 @@ cat("OpenMP strategy:", opts$`openmp-strategy`, "\n")
 # DATA LOADING FUNCTIONS
 # ============================================================================
 
-#' Load the path of the npy file from a txt file
+#' Load the path of the npy file from a txt file, with debug checks
 load_path <- function(file_path) {
+  cat("Debug: Checking if file_path exists:", file_path, "\n")
+  if (!file.exists(file_path)) {
+    stop("Debug: file_path does not exist: ", file_path)
+  }
   path <- readLines(file_path, n = 1)
+  cat("Debug: Loaded path from file:", path, "\n")
+  if (!file.exists(path)) {
+    stop("Debug: Loaded path does not exist: ", path)
+  }
   return(path)
 }
 
@@ -353,7 +364,8 @@ run_inla_model <- function(stk, par, epar, spde) {
               scale = epar,
               control.compute = list(openmp.strategy = opts$`openmp-strategy`),
               control.inla = list(tolerance = opts$tolerance, restart = opts$restart),
-              verbose = inla.getOption("verbose"))
+              verbose = TRUE
+              )
 
   return(res)
 }
@@ -363,6 +375,8 @@ run_inla_model <- function(stk, par, epar, spde) {
 # ============================================================================
 
 create_projector <- function(mesh, xlim, ylim, zoom, xsize, ysize) {
+  cat("=== PROJECTION FUNCTIONS LOADED ===\n")
+
   inla.mesh.projector(mesh,
                       xlim = xlim,
                       ylim = ylim,
@@ -370,6 +384,7 @@ create_projector <- function(mesh, xlim, ylim, zoom, xsize, ysize) {
 }
 
 compute_spatial_term <- function(projector, shape = opts$shape, res, xcenter, ycenter, eigens) {
+  cat("=== COMPUTING SPATIAL TERM ===\n")
   if (shape == 'radius') {
     radius_proj <- sqrt((projector$x - xcenter)^2 + (projector$y - ycenter)^2)
     radius_2_proj <- radius_proj^2
@@ -392,10 +407,10 @@ compute_spatial_term <- function(projector, shape = opts$shape, res, xcenter, yc
 
 project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize, ysize, 
                                 zoom, shape, xcenter, ycenter, eigens, spde = NULL) {
+  cat("=== PROJECTING INLA RESULTS ===\n")
   if (is.null(mesh) || is.null(res)) {
     stop("Error: Mesh and result inputs cannot be NULL.")
   }
-  
   # Create projector with consistent dimensions
   projector <- create_projector(mesh, c(xini, xfin), c(yini, yfin), zoom, xsize, ysize)
 
@@ -470,7 +485,8 @@ tryCatch({
   cat("=== STARTING INLA PIPELINE ===\n")
   
   # 1. Load input path
-  file_path <- "variants/path.txt"
+  file_path <- opts$`path-file`
+  cat("Debug: Checking if file_path exists:", file_path, "\n")
   if (!file.exists(file_path)) {
     file_path <- commandArgs(trailingOnly = TRUE)[1]
     if (is.na(file_path) || !file.exists(file_path)) {
