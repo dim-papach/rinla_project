@@ -237,7 +237,7 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.argument('files', nargs=-1, required=True)  # Remove the callback
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
 @click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
-@click.option('--scaling', '-s', is_flag=True, help='Enable log10 scaling')
+@click.option('--scaling', '-s', type=click.Choice(['log', 'none']), help='Enable log10 scaling')
 @click.option('--nonstationary', is_flag=True, help='Enable non-stationary model')
 @click.option('--output-dir', '-o', type=Path, help='Output directory')
 @click.option('--mesh-cutoff', type=float, help='Minimum distance between mesh points')
@@ -324,7 +324,7 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
     # Create INLA configuration
     inla_cfg = INLAConfig(
         shape=process_config.get('shape', 'none'),
-        scaling=process_config.get('scaling', False),
+        scaling=process_config.get('scaling', 'log'),
         nonstationary=process_config.get('nonstationary', False),
         mesh_cutoff=process_config.get('mesh_cutoff', None),
         mesh_resolution=process_config.get('mesh_resolution', 30),

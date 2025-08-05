@@ -99,12 +99,11 @@ class INLAConfig:
     Default: 0
     """
     
-    scaling: bool = False
-    """Whether to apply log10 transformation to data.
-    Recommended for astronomical data with large dynamic range (e.g., counts from CCD).
-    - True: Good for photon counts, flux measurements
-    - False: Good for already-processed data, calibrated magnitudes
-    Default: False
+    scaling: str = "log"
+    """Data scaling method.
+    - 'none': No transformation
+    - 'log': Apply log10 transformation (recommended for astronomical data with large dynamic range)
+    Default: 'log'
     """
     
     nonstationary: bool = False

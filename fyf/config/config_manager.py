@@ -36,7 +36,7 @@ class ConfigManager:
                 "mesh_cutoff": None,
                 "tolerance": 1e-4,
                 "restart": 0,
-                "scaling": False,
+                "scaling": 'log',  # 'log' or 'none'
                 "nonstationary": False,
                 "output_dir": "./processed",
                 

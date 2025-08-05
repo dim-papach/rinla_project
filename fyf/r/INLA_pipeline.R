@@ -16,8 +16,8 @@ option_list <- list(
             help="Path to the file containing NPY path"),
   make_option("--shape", type="character", default="none", 
               help="Shape parameter: none, radius, or ellipse [default: %default]"),
-  make_option("--scaling",type = "logical", action="store_true", default=TRUE,
-              help="Enable log10 scaling [default: %default]"),
+  make_option("--scaling", type = "character", default="log",
+              help="Scaling transformation: 'log' or 'none' [default: %default]"),
   make_option("--tolerance", type="double", default=1e-4,
               help="INLA convergence tolerance [default: %default]"),
   make_option("--restart", type="integer", default=0L,
@@ -130,13 +130,15 @@ prepare_data <- function(img, scaling = opts$scaling) {
   img[img == "BLANK" | img == "blank"] <- NA
   
   # Apply scaling transformation
-  if (scaling) {
+  if (scaling == "log") {
     logimg <- log10(img)
     logimg[is.infinite(logimg)] <- 0  # Replace -Inf and Inf with 0
     cat("Applied log10 scaling\n")
-  } else {
+  } else if (scaling == "none") {
     logimg <- img
     cat("No scaling applied\n")
+  } else {
+    stop("Unknown scaling option: ", scaling)
   }
   
   # Identify valid data points
@@ -437,7 +439,7 @@ project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize, ysize
 
 #' Apply inverse scaling transformation
 unscale_results <- function(results, scaling = opts$scaling) {
-  if (scaling) {
+  if (scaling == "log") {
     results <- lapply(results, function(x) {
       if (is.numeric(x)) {
         10^x  # Inverse of log10
