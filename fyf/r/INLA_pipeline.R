@@ -319,7 +319,7 @@ prepare_model_stack <- function(shape = opts$shape, x, y, par, A, spde, weight, 
       ),
       tag = 'est'
     )
-    return(list(stk = stk, eigens = eigen_decomp))
+    return(list(stk = stk, eigens = eigens))
     
   } else if (shape == 'none') {
     # No spatial covariates
@@ -574,9 +574,9 @@ tryCatch({
   # 8. Apply inverse scaling and save
   final_results <- unscale_results(projected_results)
   
-  output_dir <- "INLA_output_NPY"
+  output_dir <- "processed"
   if (!dir.exists(output_dir)) {
-    dir.create(output_dir)
+    dir.create(output_dir, recursive = TRUE)
   }
   
   fname <- sub("\\.npy$", "", basename(npy_path))
