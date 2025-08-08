@@ -110,27 +110,6 @@ cat("Debug: INLA num.threads set to 6\n")
 # Step 1: Get Data from npy file
 # ---------------------------------------------------------------------------
 
-#' Load the path of the npy file from a txt file
-#'
-#' This function loads the path of the npy file from a text file.
-#' @param file_path A character string specifying the path to the text file.
-#' @return A character string containing the path to the npy file.
-#' @examples
-#' path <- load_path("path/to/file.txt")
-
-load_path <- function(file_path) {
-  cat("Debug: Checking if file_path exists:", file_path, "\n")
-  if (!file.exists(file_path)) {
-    stop("Debug: file_path does not exist: ", file_path)
-  }
-  path <- readLines(file_path, n = 1)
-  cat("Debug: Loaded path from file:", path, "\n")
-  if (!file.exists(path)) {
-    stop("Debug: Loaded path does not exist: ", path)
-  }
-  return(path)
-}
-
 #' Get Data from a NPY File
 #'
 #' This function loads data from a NPY file and returns it as a matrix.
@@ -863,17 +842,17 @@ project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsiz
 
 tryCatch({
   # 1. Load path
-  file_path <- "variants/path.txt"
-  cat("Debug: Looking for path file at", file_path, "\n")
-  # if no path.txt file, use the first argument as the path
-  if (!file.exists(file_path)) {
-    cat("Debug: path.txt not found, checking commandArgs\n")
-    file_path <- commandArgs(trailingOnly = TRUE)[1]
-    if (is.na(file_path) || !file.exists(file_path)) {
-      stop("No valid path provided. Please create a path.txt file or provide a path as an argument.")
-    }
-  }
-  npy_path <- readLines(file_path, n = -1)
+#  file_path <- opts$`path-file`
+#  cat("Debug: Looking for path file at", file_path, "\n")
+#  # if no path.txt file, use the first argument as the path
+#  if (!file.exists(file_path)) {
+#    cat("Debug: path.txt not found, checking commandArgs\n")
+#    file_path <- commandArgs(trailingOnly = TRUE)[1]
+#    if (is.na(file_path) || !file.exists(file_path)) {
+#      stop("No valid path provided. Please create a path.txt file or provide a path as an argument.")
+#    }
+#  }
+  npy_path <- opts$`path-file` #readLines(file_path, n = -1)
   print(npy_path)
   cat("Debug: npy_path loaded:", npy_path, "\n")
 

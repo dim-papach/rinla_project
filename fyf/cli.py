@@ -391,12 +391,7 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
                 # Save data as NPY file in variants directory
                 input_path = f"variants/{basename}.npy"
                 np.save(input_path, data)
-                
-                # Save path to NPY file in path.txt
-                path_file = f"variants/path.txt"
-                with open(path_file, "w") as f:
-                    f.write(os.path.abspath(input_path)+"\n")
-                print(f"Debug: Saved path file to {path_file}")
+                echo_colored(f"Debug: Saved input data to {input_path}", Colors.INFO)
                 
                 # Build R script command
                 processor = FitsProcessor(cosmic_cfg=0, satellite_cfg=0)
