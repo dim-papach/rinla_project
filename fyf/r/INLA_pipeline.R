@@ -288,30 +288,41 @@ compute_parameters <- function(valid, tx, ty, logimg, weight, tepar = NULL) {
 #'
 #' @examples
 #' mesh <- create_inla_mesh(x, y, cutoff)
-create_inla_mesh <- function(x, y, max.edge = NULL, resolution = 30) {
+create_inla_mesh <- function(x, y, max_edge = NULL,
+                            max_edge_factor = opts$`max-edge-factor`,
+                            outer_edge_factor = opts$`outer-edge-factor`,
+                            offset_outer_factor = opts$`offset-outer-factor`,
+                            offset_inner_factor = opts$`offset-inner-factor`,
+                            resolution = opts$`mesh-resolution`) {
   if (length(x) == 0 || length(y) == 0) {
       stop("Error: Insufficient points to create a mesh.")
   }
   # Calculate data range
   x_range <- diff(range(x))
   y_range <- diff(range(y))
-  max.range <- max(x_range, y_range)
-
+  max_range <- max(x_range, y_range)
+ 
   # Set default max.edge if not provided
-  if(is.null(max.edge)) {
-    max.edge <- max.range / 10  # Default to 10% of maximum range
+  if(is.null(max_edge)) {
+    max_edge <- max_range / max_edge_factor
   }
 
   # Calculate cutoff as max.edge/6 (ensuring it's ≥ 1e-5)
-  cutoff <- max(max.edge / resolution, 1e-5)
+  cutoff <- max(max_edge / resolution, 1e-5)
 
+  cat("Mesh parameters:\n")
+  cat("  max_edge:", max_edge, "\n")
+  cat("  cutoff:", cutoff, "\n")
+  cat("  mesh_resolution:", opts$`mesh-resolution`, "\n")
   # Create mesh
   mesh <- tryCatch(
     INLA::inla.mesh.2d(
       loc = cbind(x, y),
-      max.edge = c(max.edge, max.edge * 1.5),  # Inner and outer resolution
+      max.edge = c(max_edge,
+                  max_edge * outer_edge_factor),  # Inner and outer resolution
       cutoff = cutoff,
-      offset = c(max.edge * 0.5, max.edge * 2)  # Boundary extensions
+      offset = c(max_edge * offset_inner_factor,
+                max_edge * offset_outer_factor)  # Boundary extensions
     ),
     error = function(e) stop("Mesh creation failed: ", e$message))
 
@@ -886,7 +897,7 @@ tryCatch({
   # 6. Create mesh
   print("Create_mesh")
   cat("Debug: Calling create_inla_mesh\n")
-  inla_mesh <- create_inla_mesh(model_params$x, model_params$y, resolution = max_edge_resolution)
+  inla_mesh <- create_inla_mesh(model_params$x, model_params$y)
   cat("Debug: create_inla_mesh returned\n")
 
   # 7. Define SPDE model
