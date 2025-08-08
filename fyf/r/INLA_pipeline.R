@@ -98,7 +98,6 @@ cat("Prior sigma upper:", opts$`prior-sigma-upper`, "\n")
 cat("Threads:", opts$`num-threads`, "\n")
 cat("OpenMP strategy:", opts$`openmp-strategy`, "\n")
 
-scalingg <- TRUE
 max_edge_resolution <- 3
 cat("Debug: scalingg set to TRUE\n")
 inla.setOption(num.threads = 6)
@@ -137,14 +136,14 @@ load_npy <- function(file_path) {
 #' creating coordinate matrices, identifying valid data points, and normalizing the image data.
 #'
 #' @param img A numeric matrix representing the image data to be analyzed.
-#' @param scaling If scale=TRUE then turn the values to log
+#' @param scaling A character string indicating the scaling method to be applied. "log" or "none".
 #'
 #' @return A list containing prepared data for INLA analysis.
 #'
 #' @examples
 #' img <- matrix(runif(100), nrow = 10, ncol = 10)
 #' prepared_data <- prepare_data(img)
-prepare_data <- function(img, scaling = TRUE) {
+prepare_data <- function(img, scaling = opts$scaling) {
   # Check if the input is a valid matrix
   if (is.null(dim(img)) || length(dim(img)) != 2) {
     stop("Error: The image data is not a 2D matrix.")
@@ -161,7 +160,7 @@ prepare_data <- function(img, scaling = TRUE) {
   img[img == "BLANK"] <- NA
   img[img == "blank"] <- NA
   # Normalize data
-  if (scaling==TRUE){
+  if (scaling=="log"){
   logimg <- log10(img)
   logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with 0
   }
@@ -557,15 +556,15 @@ adjust_zoom <- function(output, outputsd, zoom) {
 #' and optionally applies 10^ to numerical matrices, vectors, or scalars if `scale = TRUE`.
 #'
 #' @param collected A list of collected results from `collect_inla_results`.
-#' @param scale A logical value. If `TRUE`, applies 10^ to all applicable elements.
+#' @param scaling A string value. If scale = "log", then apply 10^ to the collected results. If scale = "none", then do nothing.
 #'
 #' @return The modified list of collected results with unscaled values if `scale = TRUE`.
 #'
 #' @examples
 #' collected <- collect_inla_results(...)
 #' unscaled_results <- unscale_collected(collected, scale = TRUE)
-unscale_collected <- function(collected, scaling = FALSE) {
-  if (scaling) {
+unscale_collected <- function(collected, scaling = opts$scaling) {
+  if (scaling == "log") {
     # Iterate through each element in the list
     collected <- lapply(collected, function(x) {
       if (is.numeric(x)) {
@@ -841,18 +840,8 @@ project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsiz
 # ---- Pipeline Execution ----
 
 tryCatch({
-  # 1. Load path
-#  file_path <- opts$`path-file`
-#  cat("Debug: Looking for path file at", file_path, "\n")
-#  # if no path.txt file, use the first argument as the path
-#  if (!file.exists(file_path)) {
-#    cat("Debug: path.txt not found, checking commandArgs\n")
-#    file_path <- commandArgs(trailingOnly = TRUE)[1]
-#    if (is.na(file_path) || !file.exists(file_path)) {
-#      stop("No valid path provided. Please create a path.txt file or provide a path as an argument.")
-#    }
-#  }
-  npy_path <- opts$`path-file` #readLines(file_path, n = -1)
+  # 1. Load file path from options
+  npy_path <- opts$`path-file` %||% stop("Error: 'path-file' option is not set.")
   print(npy_path)
   cat("Debug: npy_path loaded:", npy_path, "\n")
 
@@ -867,7 +856,7 @@ tryCatch({
   # 3. Prepare data
   print("Prepare_data")
   cat("Debug: Calling prepare_data\n")
-  inla_variables <- prepare_data(raw_data, scaling = scalingg)
+  inla_variables <- prepare_data(raw_data, scaling = opts$scaling)
   cat("Debug: prepare_data returned, names:", paste(names(inla_variables), collapse = ", "), "\n")
 
   # 4. Validate data
@@ -991,7 +980,7 @@ tryCatch({
   # 13. Unscale results
   print("Unscale results")
   cat("Debug: Calling unscale_collected\n")
-  unscaled_results <- unscale_collected(inla_results_collected, scaling = scalingg)
+  unscaled_results <- unscale_collected(inla_results_collected, scaling = opts$scaling)
   cat("Debug: unscale_collected returned, dim:", paste(dim(unscaled_results), collapse = "x"), "\n")
 
   # 13.5 Plot the image (optional)
@@ -1030,7 +1019,7 @@ tryCatch({
     save_npy = TRUE,
     save_csv = FALSE,  # Set to TRUE if CSV is needed
     save_png = TRUE,
-    scale = FALSE  # Apply 10^x scaling (same as unscale_collected)
+    scale = op  # Apply 10^x scaling (same as unscale_collected)
   )
 
   message("\n ✅  Pipeline completed successfully. Results saved to:\n", output_dir)
