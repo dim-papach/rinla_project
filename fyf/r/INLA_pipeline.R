@@ -80,6 +80,24 @@ option_list <- list(
 opt_parser <- OptionParser(option_list=option_list)
 opts <- parse_args(opt_parser)
 
+# Set INLA options based on parsed arguments
+inla.setOption(num.threads = opts$`num-threads`)
+inla.setOption(blas.num.threads = opts$`num-threads`)
+
+# Display configuration
+cat("=== INLA CONFIGURATION ===\n")
+cat("Shape:", opts$shape, "\n")
+cat("Scaling:", opts$scaling, "\n")
+cat("Tolerance:", opts$tolerance, "\n")
+cat("Restart:", opts$restart, "\n")
+cat("Non-stationary:", opts$nonstationary, "\n")
+cat("Mesh resolution:", opts$`mesh-resolution`, "\n")
+cat("Max edge factor:", opts$`max-edge-factor`, "\n")
+cat("Prior range lower:", opts$`prior-range-lower`, "\n")
+cat("Prior sigma upper:", opts$`prior-sigma-upper`, "\n")
+cat("Threads:", opts$`num-threads`, "\n")
+cat("OpenMP strategy:", opts$`openmp-strategy`, "\n")
+
 scalingg <- TRUE
 max_edge_resolution <- 3
 cat("Debug: scalingg set to TRUE\n")
