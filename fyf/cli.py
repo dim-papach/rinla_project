@@ -237,11 +237,33 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.argument('files', nargs=-1, required=True)  # Remove the callback
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
 @click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
-@click.option('--scaling', '-s', is_flag=True, help='Enable log10 scaling')
+@click.option('--scaling', '-s', type=click.Choice(['log', 'none']), help='Enable log10 scaling')
+@click.option('--nonstationary', is_flag=True, help='Enable non-stationary model')
 @click.option('--output-dir', '-o', type=Path, help='Output directory')
+@click.option('--mesh-cutoff', type=float, help='Minimum distance between mesh points')
+@click.option('--mesh-resolution', type=int, help='Mesh resolution factor')
+@click.option('--max-edge-factor', type=float, help='Max edge factor for mesh')
+@click.option('--outer-edge-factor', type=float, help='Outer edge factor for mesh')
+@click.option('--offset-inner-factor', type=float, help='Inner offset factor for mesh')
+@click.option('--offset-outer-factor', type=float, help='Outer offset factor for mesh')
+@click.option('--alpha', type=int, help='SPDE smoothness parameter (1 or 2)')
+@click.option('--prior-range-prob', type=float, help='Prior probability for range parameter')
+@click.option('--prior-range-lower', type=float, help='Lower bound for range prior')
+@click.option('--prior-sigma-prob', type=float, help='Prior probability for sigma parameter')
+@click.option('--prior-sigma-upper', type=float, help='Upper bound for sigma prior')
+@click.option('--num-threads', type=int, help='Number of CPU threads')
+@click.option('--openmp-strategy', type=click.Choice(['small', 'medium', 'large', 'huge']), help='OpenMP strategy')
+@click.option('--nbasis', type=int, help='Number of basis functions for non-stationary model')
+@click.option('--spline-degree', type=int, help='Degree of B-spline basis functions')
+@click.option('--tolerance', type=float, help='INLA convergence tolerance')
+@click.option('--restart', type=int, help='Number of INLA restarts')
 @click.pass_context
-def process(ctx, files, config, shape, scaling, output_dir):
-    """Process FITS images with INLA to fill missing data (NaN values)"""
+def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
+            mesh_cutoff, mesh_resolution, max_edge_factor, outer_edge_factor,
+            offset_inner_factor, offset_outer_factor, alpha, prior_range_prob,
+            prior_range_lower, prior_sigma_prob, prior_sigma_upper, num_threads,
+            openmp_strategy, nbasis, spline_degree, tolerance, restart):
+
     echo_banner("FYF Processing")
     
     # Debug: Check what files contains
@@ -283,6 +305,24 @@ def process(ctx, files, config, shape, scaling, output_dir):
     cli_args = {
         'shape': shape,
         'scaling': scaling,
+        'nonstationary': nonstationary,
+        'mesh_cutoff': mesh_cutoff,
+        'mesh_resolution': mesh_resolution,
+        'max_edge_factor': max_edge_factor,
+        'outer_edge_factor': outer_edge_factor,
+        'offset_inner_factor': offset_inner_factor,
+        'offset_outer_factor': offset_outer_factor,
+        'alpha': alpha,
+        'prior_range_prob': prior_range_prob,
+        'prior_range_lower': prior_range_lower,
+        'prior_sigma_prob': prior_sigma_prob,
+        'prior_sigma_upper': prior_sigma_upper,
+        'num_threads': num_threads,
+        'openmp_strategy': openmp_strategy,
+        'nbasis': nbasis,
+        'spline_degree': spline_degree,
+        'tolerance': tolerance,
+        'restart': restart,
         'output_dir': str(output_dir) if output_dir else None
     }
     
@@ -291,7 +331,25 @@ def process(ctx, files, config, shape, scaling, output_dir):
     # Create INLA configuration
     inla_cfg = INLAConfig(
         shape=process_config.get('shape', 'none'),
-        scaling=process_config.get('scaling', False)
+        scaling=process_config.get('scaling', 'log'),
+        nonstationary=process_config.get('nonstationary', False),
+        mesh_cutoff=process_config.get('mesh_cutoff', None),
+        mesh_resolution=process_config.get('mesh_resolution', 30),
+        max_edge_factor=process_config.get('max_edge_factor', 10.0),
+        outer_edge_factor=process_config.get('outer_edge_factor', 1.5),
+        offset_inner_factor=process_config.get('offset_inner_factor', 0.5),
+        offset_outer_factor=process_config.get('offset_outer_factor', 2.0),
+        alpha=process_config.get('alpha', 2),
+        prior_range_prob=process_config.get('prior_range_prob', 0.2),
+        prior_range_lower=process_config.get('prior_range_lower', 2.0),
+        prior_sigma_prob=process_config.get('prior_sigma_prob', 0.2),
+        prior_sigma_upper=process_config.get('prior_sigma_upper', 2.0),
+        num_threads=process_config.get('num_threads', 6),
+        openmp_strategy=process_config.get('openmp_strategy', 'huge'),
+        nbasis=process_config.get('nbasis', 2),
+        spline_degree=process_config.get('spline_degree', 10),
+        tolerance=process_config.get('tolerance', 1e-4),
+        restart=process_config.get('restart', 0)
     )
     
     # Set output directory
@@ -361,25 +419,12 @@ def process(ctx, files, config, shape, scaling, output_dir):
                 # Save path to NPY file in path.txt
                 path_file = f"variants/path.txt"
                 with open(path_file, "w") as f:
-                    f.write(input_path)
+                    f.write(os.path.abspath(input_path)+"\n")
+                print(f"Debug: Saved path file to {path_file}")
                 
                 # Build R script command
-                cmd = ["Rscript", inla_script_path]
-                
-                # Add INLA configuration parameters
-                if inla_cfg.shape != "none":
-                    cmd.extend(["--shape", inla_cfg.shape])
-                if inla_cfg.mesh_cutoff is not None:
-                    cmd.extend(["--mesh-cutoff", str(inla_cfg.mesh_cutoff)])
-                if inla_cfg.tolerance != 1e-4:
-                    cmd.extend(["--tolerance", str(inla_cfg.tolerance)])
-                if inla_cfg.restart != 0:
-                    cmd.extend(["--restart", str(inla_cfg.restart)])
-                if inla_cfg.scaling:
-                    cmd.append("--scaling")
-                if inla_cfg.nonstationary:
-                    cmd.append("--nonstationary")
-                
+                processor = FitsProcessor(cosmic_cfg=0, satellite_cfg=0)
+                cmd = processor.build_inla_command(inla_script_path=inla_script_path, inla_config=inla_cfg or INLAConfig(), path_file=input_path)
                 ## Run R script
                 # Set up environment for R script
                 env = os.environ.copy()
