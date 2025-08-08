@@ -368,38 +368,13 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
     echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
     echo_colored(f"Output directory: {output_dir}", Colors.INFO)
     
-    # Get the correct path to the R script using modern approach
-    try:
-        # Modern approach using importlib.resources (Python 3.9+)
-        try:
-            from importlib.resources import files
-            r_scripts = files('fyf') / 'r'
-            inla_script_path = str(r_scripts / 'INLA_pipeline.R')
-        except ImportError:
-            # Fallback for older Python versions using importlib_resources
-            try:
-                import importlib_resources
-                r_scripts = importlib_resources.files('fyf') / 'r'
-                inla_script_path = str(r_scripts / 'INLA_pipeline.R')
-            except ImportError:
-                # Last resort: use pkg_resources (but suppress the warning)
-                import warnings
-                with warnings.catch_warnings():
-                    warnings.filterwarnings("ignore", category=UserWarning, module=".*pkg_resources.*")
-                    import pkg_resources
-                    inla_script_path = pkg_resources.resource_filename('fyf', 'r/INLA_pipeline.R')
-        
-        if not os.path.exists(inla_script_path):
-            raise FileNotFoundError(f"R script not found: {inla_script_path}")
-            
-    except (ImportError, FileNotFoundError):
-        # Fallback: try relative path (for development)
-        import fyf.core.paths as paths
-        inla_script_path = paths.get_inla_script_path()
-        if not os.path.exists(inla_script_path):
-            echo_colored("Error: R script not found. Make sure FYF is properly installed with R scripts.", Colors.ERROR)
-            echo_colored("Try reinstalling: pip install --force-reinstall .", Colors.INFO)
-            return
+
+    import fyf.core.paths as paths
+    inla_script_path = paths.get_inla_script_path()
+    if not os.path.exists(inla_script_path):
+        echo_colored("Error: R script not found. Make sure FYF is properly installed with R scripts.", Colors.ERROR)
+        echo_colored("Try reinstalling: pip install --force-reinstall .", Colors.INFO)
+        return
     
     echo_colored(f"Using R script: {inla_script_path}", Colors.INFO)
     
