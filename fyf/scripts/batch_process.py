@@ -104,13 +104,17 @@ def parse_args():
     )
     inla_group.add_argument(
         '--scaling',
-        action='store_true',
+        type=str,
+        default='log',
+        choices=['log', 'none'],
         help='Enable log10 scaling of values'
     )
     inla_group.add_argument(
-        '--nonstationary',
-        action='store_true',
-        help='Use nonstationary model'
+        '--stationary',
+        type=str,
+        default='yes',
+        choices=['yes', 'no'],
+        help='Use stationary model for INLA'
     )
     
     # Output configuration
@@ -289,7 +293,7 @@ def main():
         tolerance=config.get('tolerance', args.tolerance),
         restart=config.get('restart', args.restart),
         scaling=config.get('scaling', args.scaling),
-        nonstationary=config.get('nonstationary', args.nonstationary)
+        stationary=config.get('stationary', args.stationary)
     )
     
     plot_cfg = None

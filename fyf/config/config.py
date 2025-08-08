@@ -106,12 +106,11 @@ class INLAConfig:
     Default: 'log'
     """
     
-    nonstationary: bool = False
+    stationary: str = "yes"
     """Use non-stationary spatial model.
-    - False: Assumes spatial correlation is the same everywhere (faster)
-    - True: Allows spatial correlation to vary across the image (slower, more flexible)
-    Use True for complex astronomical objects with varying structure.
-    Default: False
+    - 'no': Assumes spatial correlation is the same everywhere 
+    - 'yes': Allows spatial correlation to vary across the image
+    Default: 'yes'
     """
     
     # ========== MESH PARAMETERS ==========
@@ -242,7 +241,7 @@ class INLAConfig:
     
     nbasis: int = 2
     """Number of basis functions for non-stationary model.
-    Only used if nonstationary=True.
+    Only used if non-stationary.
     Controls flexibility of spatial parameter variation.
     - 2-5: Simple variation patterns
     - 5-10: Complex variation patterns  
@@ -253,7 +252,7 @@ class INLAConfig:
     
     spline_degree: int = 10
     """Degree of B-spline basis functions for non-stationary model.
-    Only used if nonstationary=True.
+    Only used if non-stationary.
     Controls smoothness of parameter variation.
     - 5-10: Smooth variation
     - 10-20: Medium smoothness

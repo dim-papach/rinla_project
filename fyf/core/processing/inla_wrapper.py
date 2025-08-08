@@ -94,8 +94,8 @@ class INLAWrapper:
                 cmd.extend(["--restart", str(config.restart)])
             if config.scaling:
                 cmd.append("--scaling")
-            if config.nonstationary:
-                cmd.append("--nonstationary")
+            if config.stationary:
+                cmd.append("--stationary")
             
             # Run the R script
             subprocess.run(cmd, check=True)

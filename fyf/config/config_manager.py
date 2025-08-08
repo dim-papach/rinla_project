@@ -37,7 +37,7 @@ class ConfigManager:
                 "tolerance": 1e-4,
                 "restart": 0,
                 "scaling": 'log',  # 'log' or 'none'
-                "nonstationary": False,
+                "stationary": "yes",  # 'yes' or 'no'
                 "output_dir": "./processed",
                 
                 # Mesh parameters
@@ -148,7 +148,7 @@ class ConfigManager:
             tolerance=process_cfg.get("tolerance", 1e-4),
             restart=process_cfg.get("restart", 0),
             scaling=process_cfg.get("scaling", False),
-            nonstationary=process_cfg.get("nonstationary", False)
+            stationary=process_cfg.get("stationary", "yes")
         )
         
         plot_config = PlotConfig(

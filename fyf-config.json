@@ -16,7 +16,7 @@
     "tolerance": 0.0001,
     "restart": 0,
     "scaling": false,
-    "nonstationary": false,
+    "stationary": "yes",
     "output_dir": "./processed"
   },
   "validate": {

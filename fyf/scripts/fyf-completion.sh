@@ -15,8 +15,8 @@ _fyf_completion() {
     
     # Options for each command
     simulate_opts="--cosmic-fraction --cosmic-value --cosmic-seed --trails --trail-width --min-angle --max-angle --trail-value --output-dir --report"
-    process_opts="--shape --mesh-cutoff --tolerance --restart --scaling --nonstationary --output-dir --check-inla --install-inla --generate-plots --report"
-    pipeline_opts="--cosmic-fraction --cosmic-value --cosmic-seed --trails --trail-width --min-angle --max-angle --trail-value --shape --mesh-cutoff --tolerance --restart --scaling --nonstationary --output-dir --skip-plots --dpi --cmap --report"
+    process_opts="--shape --mesh-cutoff --tolerance --restart --scaling --stationary --output-dir --check-inla --install-inla --generate-plots --report"
+    pipeline_opts="--cosmic-fraction --cosmic-value --cosmic-seed --trails --trail-width --min-angle --max-angle --trail-value --shape --mesh-cutoff --tolerance --restart --scaling --stationary --output-dir --skip-plots --dpi --cmap --report"
     validate_opts="--output-dir --plot --html-report --dpi --cmap"
     plot_opts="--plot-type --output-dir --dpi --cmap --residual-cmap --percentile-min --percentile-max --residual-percentile-min --residual-percentile-max"
     

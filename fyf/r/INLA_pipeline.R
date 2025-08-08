@@ -34,7 +34,7 @@ option_list <- list(
               help="INLA convergence tolerance [default: %default]"),
   make_option("--restart", type="integer", default=0L,
               help="Number of INLA restarts [default: %default]"),
-  make_option("--nonstationary",type = "logical" ,action="store_true", default = FALSE,
+  make_option("--stationary",type = "character" , default = "yes",
               help="Use non-stationary SPDE model [default: %default]"),
   make_option("--verbose", type="logical", default=TRUE,
               help="Print verbose output during INLA computation [default: %default]"),
@@ -90,7 +90,7 @@ cat("Shape:", opts$shape, "\n")
 cat("Scaling:", opts$scaling, "\n")
 cat("Tolerance:", opts$tolerance, "\n")
 cat("Restart:", opts$restart, "\n")
-cat("Non-stationary:", opts$nonstationary, "\n")
+cat("Stationary:", opts$stationary, "\n")
 cat("Mesh resolution:", opts$`mesh-resolution`, "\n")
 cat("Max edge factor:", opts$`max-edge-factor`, "\n")
 cat("Prior range lower:", opts$`prior-range-lower`, "\n")
@@ -334,7 +334,7 @@ create_inla_mesh <- function(x, y, max_edge = NULL,
 #' This function defines the SPDE model based on whether it's stationary or non-stationary.
 #'
 #' @param mesh An INLA mesh object.
-#' @param nonstationary A logical value indicating whether to use a non-stationary model.
+#' @param stationary A logical value indicating whether to use a non-stationary model.
 #' @param p_range A numeric vector representing the prior range for the Gaussian process.
 #' @param p_sigma A numeric vector representing the prior sigma for the Gaussian process.
 #' @param nbasis Number of basis functions for non-stationary model (if applicable).
@@ -343,9 +343,11 @@ create_inla_mesh <- function(x, y, max_edge = NULL,
 #' @return An SPDE model object.
 #'
 #' @examples
-#' spde <- define_spde_model(mesh, nonstationary, p_range, p_sigma)
-define_spde_model <- function(mesh, nonstationary, p_range, p_sigma, nbasis = 2, degree = 10) {
-  if (nonstationary) {
+#' spde <- define_spde_model(mesh, stationary, p_range, p_sigma)
+
+define_spde_model <- function(mesh, stationary = opts$stationary
+, p_range, p_sigma, nbasis = 2, degree = 10) {
+  if (stationary == "no") {
     # Inverse scale: degree=10, n=2 (default values)
     basis.T <- inla.mesh.basis(mesh, type = "b.spline", n = nbasis, degree = degree)
     # Inverse range
@@ -905,7 +907,7 @@ tryCatch({
   cat("Debug: Calling define_spde_model\n")
   spde_model <- define_spde_model(
     inla_mesh,
-    nonstationary = FALSE,
+    stationary = opts$stationary,
     p_range = c(2, 0.2),
     p_sigma = c(2, 0.2)
   )

@@ -238,7 +238,7 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
 @click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
 @click.option('--scaling', '-s', type=click.Choice(['log', 'none']), help='Enable log10 scaling')
-@click.option('--nonstationary', is_flag=True, help='Enable non-stationary model')
+@click.option('--stationary', is_flag=True, help='Enable stationary model')
 @click.option('--output-dir', '-o', type=Path, help='Output directory')
 @click.option('--mesh-cutoff', type=float, help='Minimum distance between mesh points')
 @click.option('--mesh-resolution', type=int, help='Mesh resolution factor')
@@ -258,7 +258,7 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.option('--tolerance', type=float, help='INLA convergence tolerance')
 @click.option('--restart', type=int, help='Number of INLA restarts')
 @click.pass_context
-def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
+def process(ctx, files, config, shape, scaling, stationary, output_dir,
             mesh_cutoff, mesh_resolution, max_edge_factor, outer_edge_factor,
             offset_inner_factor, offset_outer_factor, alpha, prior_range_prob,
             prior_range_lower, prior_sigma_prob, prior_sigma_upper, num_threads,
@@ -305,7 +305,7 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
     cli_args = {
         'shape': shape,
         'scaling': scaling,
-        'nonstationary': nonstationary,
+        'stationary': stationary,
         'mesh_cutoff': mesh_cutoff,
         'mesh_resolution': mesh_resolution,
         'max_edge_factor': max_edge_factor,
@@ -332,7 +332,7 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
     inla_cfg = INLAConfig(
         shape=process_config.get('shape', 'none'),
         scaling=process_config.get('scaling', 'log'),
-        nonstationary=process_config.get('nonstationary', False),
+        stationary=process_config.get('stationary', "yes"),
         mesh_cutoff=process_config.get('mesh_cutoff', None),
         mesh_resolution=process_config.get('mesh_resolution', 30),
         max_edge_factor=process_config.get('max_edge_factor', 10.0),
