@@ -238,7 +238,7 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
 @click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
 @click.option('--scaling', '-s', type=click.Choice(['log', 'none']), help='Enable log10 scaling')
-@click.option('--stationary', is_flag=True, help='Enable stationary model')
+@click.option('--stationary', type=click.Choice(['yes', 'no']), help='Enable stationary model')
 @click.option('--output-dir', '-o', type=Path, help='Output directory')
 @click.option('--mesh-cutoff', type=float, help='Minimum distance between mesh points')
 @click.option('--mesh-resolution', type=int, help='Mesh resolution factor')
