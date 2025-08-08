@@ -22,9 +22,66 @@ cat("Debug: Loaded required libraries\n")
 # setwd(here::here())
 # cat("Debug: Current working directory after setwd:", getwd(), "\n")
 #----------------------
+option_list <- list(
+  # Basic parameters
+  make_option("--path-file", type="character", default="/tmp/fyf_variants/path.txt",
+            help="Path to the file containing NPY path"),
+  make_option("--shape", type="character", default="none", 
+              help="Shape parameter: none, radius, or ellipse [default: %default]"),
+  make_option("--scaling", type = "character", default="log",
+              help="Scaling transformation: 'log' or 'none' [default: %default]"),
+  make_option("--tolerance", type="double", default=1e-4,
+              help="INLA convergence tolerance [default: %default]"),
+  make_option("--restart", type="integer", default=0L,
+              help="Number of INLA restarts [default: %default]"),
+  make_option("--nonstationary",type = "logical" ,action="store_true", default = FALSE,
+              help="Use non-stationary SPDE model [default: %default]"),
+  make_option("--verbose", type="logical", default=TRUE,
+              help="Print verbose output during INLA computation [default: %default]"),
+              
+  # Mesh parameters
+  make_option("--mesh-resolution", type="integer", default=30L,
+              help="Mesh resolution factor [default: %default]"),
+  make_option("--max-edge-factor", type="double", default=10.0,
+              help="Max edge factor for mesh [default: %default]"),
+  make_option("--outer-edge-factor", type="double", default=1.5,
+              help="Outer edge factor for mesh [default: %default]"),
+  make_option("--offset-inner-factor", type="double", default=0.5,
+              help="Inner offset factor for mesh [default: %default]"),
+  make_option("--offset-outer-factor", type="double", default=2.0,
+              help="Outer offset factor for mesh [default: %default]"),
+              
+  # SPDE parameters
+  make_option("--alpha", type="integer", default=2L,
+              help="SPDE smoothness parameter (1 or 2) [default: %default]"),
+  make_option("--prior-range-prob", type="double", default=0.2,
+              help="Prior probability for range parameter [default: %default]"),
+  make_option("--prior-range-lower", type="double", default=2.0,
+              help="Lower bound for range prior [default: %default]"),
+  make_option("--prior-sigma-prob", type="double", default=0.2,
+              help="Prior probability for sigma parameter [default: %default]"),
+  make_option("--prior-sigma-upper", type="double", default=2.0,
+              help="Upper bound for sigma prior [default: %default]"),
+              
+  # Computation parameters
+  make_option("--num-threads", type="integer", default=6L,
+              help="Number of threads for INLA [default: %default]"),
+  make_option("--openmp-strategy", type="character", default="huge",
+              help="OpenMP strategy: small, medium, large, huge [default: %default]"),
+              
+  # Non-stationary parameters
+  make_option("--nbasis", type="integer", default=2L,
+              help="Number of basis functions for non-stationary model [default: %default]"),
+  make_option("--spline-degree", type="integer", default=2L,
+              help="Degree of B-spline basis functions [default: %default]")
+)
+
+# Parse arguments
+opt_parser <- OptionParser(option_list=option_list)
+opts <- parse_args(opt_parser)
 
 scalingg <- TRUE
-max_edge_resolution <- 30
+max_edge_resolution <- 3
 cat("Debug: scalingg set to TRUE\n")
 inla.setOption(num.threads = 6)
 cat("Debug: INLA num.threads set to 6\n")
@@ -38,7 +95,7 @@ cat("Debug: INLA num.threads set to 6\n")
 #' Load the path of the npy file from a txt file
 #'
 #' This function loads the path of the npy file from a text file.
-#' #' @param file_path A character string specifying the path to the text file.
+#' @param file_path A character string specifying the path to the text file.
 #' @return A character string containing the path to the npy file.
 #' @examples
 #' path <- load_path("path/to/file.txt")
@@ -383,7 +440,7 @@ run_inla_model <- function(stk, par, epar, spde, tolerance, restart, shape) {
               scale = epar,
               control.compute = list(openmp.strategy = 'huge'),
               control.inla = list(tolerance = tolerance, restart = restart),
-              verbose = inla.getOption("verbose"))
+              verbose = opts$verbose)
 
   return(res)
 }
