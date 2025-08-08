@@ -117,9 +117,17 @@ cat("Debug: INLA num.threads set to 6\n")
 #' @return A character string containing the path to the npy file.
 #' @examples
 #' path <- load_path("path/to/file.txt")
+
 load_path <- function(file_path) {
-  # Read the file and extract the path
+  cat("Debug: Checking if file_path exists:", file_path, "\n")
+  if (!file.exists(file_path)) {
+    stop("Debug: file_path does not exist: ", file_path)
+  }
   path <- readLines(file_path, n = 1)
+  cat("Debug: Loaded path from file:", path, "\n")
+  if (!file.exists(path)) {
+    stop("Debug: Loaded path does not exist: ", path)
+  }
   return(path)
 }
 
