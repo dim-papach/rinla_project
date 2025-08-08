@@ -394,7 +394,8 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
             
     except (ImportError, FileNotFoundError):
         # Fallback: try relative path (for development)
-        inla_script_path = "fyf/r/INLA_pipeline.R"
+        import fyf.core.paths as paths
+        inla_script_path = paths.get_inla_script_path()
         if not os.path.exists(inla_script_path):
             echo_colored("Error: R script not found. Make sure FYF is properly installed with R scripts.", Colors.ERROR)
             echo_colored("Try reinstalling: pip install --force-reinstall .", Colors.INFO)
