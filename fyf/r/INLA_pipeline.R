@@ -345,20 +345,38 @@ create_inla_mesh <- function(x, y, max_edge = NULL,
 #' @examples
 #' spde <- define_spde_model(mesh, stationary, p_range, p_sigma)
 
-define_spde_model <- function(mesh, stationary = opts$stationary
-, p_range, p_sigma, nbasis = 2, degree = 10) {
+define_spde_model <- function(mesh, stationary = opts$stationary,
+                              p_prob = opts$`prior-range-prob`,
+                              p_lower = opts$`prior-range-lower`,
+                              sigma_prob = opts$`prior-sigma-prob`,
+                              sigma_upper = opts$`prior-sigma-upper`,
+                              nbasis = opts$nbasis, 
+                              degree = opts$`spline-degree`,
+                              alpha = opts$alpha) {
+  
+  p_range <- c(p_lower, p_prob)
+  p_sigma <- c(sigma_upper, sigma_prob)
+  cat("SPDE parameters:\n")
+  cat("  stationary:", stationary , "\n")
+  cat("  alpha:", alpha, "\n")
+  cat("  p_range:", p_range, "\n")
+  cat("  p_sigma:", p_sigma, "\n")
+  cat("  nbasis:", nbasis, "\n")
+  cat("  degree:", degree, "\n")
+  
+
   if (stationary == "no") {
     # Inverse scale: degree=10, n=2 (default values)
     basis.T <- inla.mesh.basis(mesh, type = "b.spline", n = nbasis, degree = degree)
     # Inverse range
     basis.K <- inla.mesh.basis(mesh, type = "b.spline", n = nbasis, degree = degree)
 
-    spde <- inla.spde2.matern(mesh = mesh, alpha = 2,
+    spde <- inla.spde2.matern(mesh = mesh, alpha = alpha,
                               B.tau = cbind(0, basis.T, basis.K * 0),
                               B.kappa = cbind(0, basis.T * 0, basis.K / 2))
   } else {
     # Priors for Gaussian process
-    spde <- inla.spde2.pcmatern(mesh = mesh, alpha = 2,
+    spde <- inla.spde2.pcmatern(mesh = mesh, alpha = alpha,
                                 prior.range = p_range,
                                 prior.sigma = p_sigma)
   }
@@ -908,8 +926,13 @@ tryCatch({
   spde_model <- define_spde_model(
     inla_mesh,
     stationary = opts$stationary,
-    p_range = c(2, 0.2),
-    p_sigma = c(2, 0.2)
+    p_prob = opts$`prior-range-prob`,
+    p_lower = opts$`prior-range-lower`,
+    sigma_prob = opts$`prior-sigma-prob`,
+    sigma_upper = opts$`prior-sigma-upper`,
+    nbasis = opts$nbasis,
+    degree = opts$`spline-degree`,
+    alpha = opts$alpha
   )
   cat("Debug: define_spde_model returned\n")
 
