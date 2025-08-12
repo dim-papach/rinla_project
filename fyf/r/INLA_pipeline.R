@@ -1029,7 +1029,7 @@ tryCatch(
     print("Prepare_model_stack")
     cat("Debug: Calling prepare_model_stack\n")
     model_stack <- prepare_model_stack(
-      shape = "none",
+      shape = opts$shape,
       x = model_params$x,
       y = model_params$y,
       par = model_params$par,
