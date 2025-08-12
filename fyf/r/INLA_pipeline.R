@@ -24,60 +24,102 @@ cat("Debug: Loaded required libraries\n")
 #----------------------
 option_list <- list(
   # Basic parameters
-  make_option("--path-file", type="character", default="/tmp/fyf_variants/path.txt",
-            help="Path to the file containing NPY path"),
-  make_option("--shape", type="character", default="none", 
-              help="Shape parameter: none, radius, or ellipse [default: %default]"),
-  make_option("--scaling", type = "character", default="log",
-              help="Scaling transformation: 'log' or 'none' [default: %default]"),
-  make_option("--tolerance", type="double", default=1e-4,
-              help="INLA convergence tolerance [default: %default]"),
-  make_option("--restart", type="integer", default=0L,
-              help="Number of INLA restarts [default: %default]"),
-  make_option("--stationary",type = "character" , default = "yes",
-              help="Use non-stationary SPDE model [default: %default]"),
-  make_option("--verbose", type="logical", default=TRUE,
-              help="Print verbose output during INLA computation [default: %default]"),
-              
+  make_option("--path-file",
+    type = "character", default = "/tmp/fyf_variants/path.txt",
+    help = "Path to the file containing NPY path"
+  ),
+  make_option("--shape",
+    type = "character", default = "none",
+    help = "Shape parameter: none, radius, or ellipse [default: %default]"
+  ),
+  make_option("--scaling",
+    type = "character", default = "log",
+    help = "Scaling transformation: 'log' or 'none' [default: %default]"
+  ),
+  make_option("--tolerance",
+    type = "double", default = 1e-4,
+    help = "INLA convergence tolerance [default: %default]"
+  ),
+  make_option("--restart",
+    type = "integer", default = 0L,
+    help = "Number of INLA restarts [default: %default]"
+  ),
+  make_option("--stationary",
+    type = "character", default = "yes",
+    help = "Use non-stationary SPDE model [default: %default]"
+  ),
+  make_option("--verbose",
+    type = "logical", default = TRUE,
+    help = "Print verbose output during INLA computation [default: %default]"
+  ),
+
   # Mesh parameters
-  make_option("--mesh-resolution", type="integer", default=30L,
-              help="Mesh resolution factor [default: %default]"),
-  make_option("--max-edge-factor", type="double", default=10.0,
-              help="Max edge factor for mesh [default: %default]"),
-  make_option("--outer-edge-factor", type="double", default=1.5,
-              help="Outer edge factor for mesh [default: %default]"),
-  make_option("--offset-inner-factor", type="double", default=0.5,
-              help="Inner offset factor for mesh [default: %default]"),
-  make_option("--offset-outer-factor", type="double", default=2.0,
-              help="Outer offset factor for mesh [default: %default]"),
-              
+  make_option("--mesh-resolution",
+    type = "integer", default = 30L,
+    help = "Mesh resolution factor [default: %default]"
+  ),
+  make_option("--max-edge-factor",
+    type = "double", default = 10.0,
+    help = "Max edge factor for mesh [default: %default]"
+  ),
+  make_option("--outer-edge-factor",
+    type = "double", default = 1.5,
+    help = "Outer edge factor for mesh [default: %default]"
+  ),
+  make_option("--offset-inner-factor",
+    type = "double", default = 0.5,
+    help = "Inner offset factor for mesh [default: %default]"
+  ),
+  make_option("--offset-outer-factor",
+    type = "double", default = 2.0,
+    help = "Outer offset factor for mesh [default: %default]"
+  ),
+
   # SPDE parameters
-  make_option("--alpha", type="integer", default=2L,
-              help="SPDE smoothness parameter (1 or 2) [default: %default]"),
-  make_option("--prior-range-prob", type="double", default=0.2,
-              help="Prior probability for range parameter [default: %default]"),
-  make_option("--prior-range-lower", type="double", default=2.0,
-              help="Lower bound for range prior [default: %default]"),
-  make_option("--prior-sigma-prob", type="double", default=0.2,
-              help="Prior probability for sigma parameter [default: %default]"),
-  make_option("--prior-sigma-upper", type="double", default=2.0,
-              help="Upper bound for sigma prior [default: %default]"),
-              
+  make_option("--alpha",
+    type = "integer", default = 2L,
+    help = "SPDE smoothness parameter (1 or 2) [default: %default]"
+  ),
+  make_option("--prior-range-prob",
+    type = "double", default = 0.2,
+    help = "Prior probability for range parameter [default: %default]"
+  ),
+  make_option("--prior-range-lower",
+    type = "double", default = 2.0,
+    help = "Lower bound for range prior [default: %default]"
+  ),
+  make_option("--prior-sigma-prob",
+    type = "double", default = 0.2,
+    help = "Prior probability for sigma parameter [default: %default]"
+  ),
+  make_option("--prior-sigma-upper",
+    type = "double", default = 2.0,
+    help = "Upper bound for sigma prior [default: %default]"
+  ),
+
   # Computation parameters
-  make_option("--num-threads", type="integer", default=6L,
-              help="Number of threads for INLA [default: %default]"),
-  make_option("--openmp-strategy", type="character", default="huge",
-              help="OpenMP strategy: small, medium, large, huge [default: %default]"),
-              
+  make_option("--num-threads",
+    type = "integer", default = 6L,
+    help = "Number of threads for INLA [default: %default]"
+  ),
+  make_option("--openmp-strategy",
+    type = "character", default = "huge",
+    help = "OpenMP strategy: small, medium, large, huge [default: %default]"
+  ),
+
   # Non-stationary parameters
-  make_option("--nbasis", type="integer", default=2L,
-              help="Number of basis functions for non-stationary model [default: %default]"),
-  make_option("--spline-degree", type="integer", default=2L,
-              help="Degree of B-spline basis functions [default: %default]")
+  make_option("--nbasis",
+    type = "integer", default = 2L,
+    help = "Number of basis functions for non-stationary model [default: %default]"
+  ),
+  make_option("--spline-degree",
+    type = "integer", default = 2L,
+    help = "Degree of B-spline basis functions [default: %default]"
+  )
 )
 
 # Parse arguments
-opt_parser <- OptionParser(option_list=option_list)
+opt_parser <- OptionParser(option_list = option_list)
 opts <- parse_args(opt_parser)
 
 # Set INLA options based on parsed arguments
@@ -120,7 +162,7 @@ cat("Debug: INLA num.threads set to 6\n")
 #' @examples
 #' data <- get_data("path/to/file.npy")
 load_npy <- function(file_path) {
-  #import numpy as np
+  # import numpy as np
   np <- reticulate::import("numpy")
   data <- t(np$load(file_path))
   return(data)
@@ -160,16 +202,15 @@ prepare_data <- function(img, scaling = opts$scaling) {
   img[img == "BLANK"] <- NA
   img[img == "blank"] <- NA
   # Normalize data
-  if (scaling=="log"){
-  logimg <- log10(img)
-  logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with 0
-  }
-  else{
+  if (scaling == "log") {
+    logimg <- log10(img)
+    logimg[is.infinite(logimg)] <- 0 # Replace -Inf and Inf values with 0
+  } else {
     logimg <- img
   }
   # Identify valid data points
-  valid <- which(!is.na(img) & !is.nan(img) & img != 0
-                 & !is.infinite(logimg) & !is.na(logimg) & !is.nan(logimg))
+  valid <- which(!is.na(img) & !is.nan(img) & img != 0 &
+    !is.infinite(logimg) & !is.na(logimg) & !is.nan(logimg))
 
   # Check if there are any valid points
   if (length(valid) == 0) {
@@ -289,21 +330,21 @@ compute_parameters <- function(valid, tx, ty, logimg, weight, tepar = NULL) {
 #' @examples
 #' mesh <- create_inla_mesh(x, y, cutoff)
 create_inla_mesh <- function(x, y, max_edge = NULL,
-                            max_edge_factor = opts$`max-edge-factor`,
-                            outer_edge_factor = opts$`outer-edge-factor`,
-                            offset_outer_factor = opts$`offset-outer-factor`,
-                            offset_inner_factor = opts$`offset-inner-factor`,
-                            resolution = opts$`mesh-resolution`) {
+                             max_edge_factor = opts$`max-edge-factor`,
+                             outer_edge_factor = opts$`outer-edge-factor`,
+                             offset_outer_factor = opts$`offset-outer-factor`,
+                             offset_inner_factor = opts$`offset-inner-factor`,
+                             resolution = opts$`mesh-resolution`) {
   if (length(x) == 0 || length(y) == 0) {
-      stop("Error: Insufficient points to create a mesh.")
+    stop("Error: Insufficient points to create a mesh.")
   }
   # Calculate data range
   x_range <- diff(range(x))
   y_range <- diff(range(y))
   max_range <- max(x_range, y_range)
- 
+
   # Set default max.edge if not provided
-  if(is.null(max_edge)) {
+  if (is.null(max_edge)) {
     max_edge <- max_range / max_edge_factor
   }
 
@@ -318,13 +359,18 @@ create_inla_mesh <- function(x, y, max_edge = NULL,
   mesh <- tryCatch(
     INLA::inla.mesh.2d(
       loc = cbind(x, y),
-      max.edge = c(max_edge,
-                  max_edge * outer_edge_factor),  # Inner and outer resolution
+      max.edge = c(
+        max_edge,
+        max_edge * outer_edge_factor
+      ), # Inner and outer resolution
       cutoff = cutoff,
-      offset = c(max_edge * offset_inner_factor,
-                max_edge * offset_outer_factor)  # Boundary extensions
+      offset = c(
+        max_edge * offset_inner_factor,
+        max_edge * offset_outer_factor
+      ) # Boundary extensions
     ),
-    error = function(e) stop("Mesh creation failed: ", e$message))
+    error = function(e) stop("Mesh creation failed: ", e$message)
+  )
 
   return(mesh)
 }
@@ -344,26 +390,24 @@ create_inla_mesh <- function(x, y, max_edge = NULL,
 #'
 #' @examples
 #' spde <- define_spde_model(mesh, stationary, p_range, p_sigma)
-
 define_spde_model <- function(mesh, stationary = opts$stationary,
                               p_prob = opts$`prior-range-prob`,
                               p_lower = opts$`prior-range-lower`,
                               sigma_prob = opts$`prior-sigma-prob`,
                               sigma_upper = opts$`prior-sigma-upper`,
-                              nbasis = opts$nbasis, 
+                              nbasis = opts$nbasis,
                               degree = opts$`spline-degree`,
                               alpha = opts$alpha) {
-  
   p_range <- c(p_lower, p_prob)
   p_sigma <- c(sigma_upper, sigma_prob)
   cat("SPDE parameters:\n")
-  cat("  stationary:", stationary , "\n")
+  cat("  stationary:", stationary, "\n")
   cat("  alpha:", alpha, "\n")
   cat("  p_range:", p_range, "\n")
   cat("  p_sigma:", p_sigma, "\n")
   cat("  nbasis:", nbasis, "\n")
   cat("  degree:", degree, "\n")
-  
+
 
   if (stationary == "no") {
     # Inverse scale: degree=10, n=2 (default values)
@@ -371,14 +415,18 @@ define_spde_model <- function(mesh, stationary = opts$stationary,
     # Inverse range
     basis.K <- inla.mesh.basis(mesh, type = "b.spline", n = nbasis, degree = degree)
 
-    spde <- inla.spde2.matern(mesh = mesh, alpha = alpha,
-                              B.tau = cbind(0, basis.T, basis.K * 0),
-                              B.kappa = cbind(0, basis.T * 0, basis.K / 2))
+    spde <- inla.spde2.matern(
+      mesh = mesh, alpha = alpha,
+      B.tau = cbind(0, basis.T, basis.K * 0),
+      B.kappa = cbind(0, basis.T * 0, basis.K / 2)
+    )
   } else {
     # Priors for Gaussian process
-    spde <- inla.spde2.pcmatern(mesh = mesh, alpha = alpha,
-                                prior.range = p_range,
-                                prior.sigma = p_sigma)
+    spde <- inla.spde2.pcmatern(
+      mesh = mesh, alpha = alpha,
+      prior.range = p_range,
+      prior.sigma = p_sigma
+    )
   }
   return(spde)
 }
@@ -406,33 +454,42 @@ prepare_model_stack <- function(shape = opts$shape,
                                 weight, xcenter, ycenter) {
   eigens <- NULL
 
-  if (shape == 'radius') {
+  if (shape == "radius") {
     radius <- sqrt((x - xcenter)^2 + (y - ycenter)^2)
     radius_2 <- (x - xcenter)^2 + (y - ycenter)^2
 
     # Use parametric function of radius and radius^2
-    stk <- inla.stack(data = list(par = par), A = list(A, 1, 1, 1),
-                      effects = list(i = 1:spde$n.spde, m = rep(1, length(x)),
-                                     radius = radius, radius_2 = radius_2),
-                                     tag = 'est')
-  } else if (shape == 'ellipse') {
+    stk <- inla.stack(
+      data = list(par = par), A = list(A, 1, 1, 1),
+      effects = list(
+        i = 1:spde$n.spde, m = rep(1, length(x)),
+        radius = radius, radius_2 = radius_2
+      ), tag = "est"
+    )
+  } else if (shape == "ellipse") {
     # Compute weighted covariance
     m_weights <- rep(weight, length(x))
     covar <- cov.wt(cbind(x, y), wt = m_weights)
 
     eigens <- eigen(covar$cov)
-    ellipse <- (cbind(x - xcenter, y - ycenter) %*% (eigens$vectors[,1]))^2 / eigens$values[1] +
-      (cbind(x - xcenter, y - ycenter) %*% (eigens$vectors[,2]))^2 / eigens$values[2]
+    ellipse <- (cbind(x - xcenter, y - ycenter) %*% (eigens$vectors[, 1]))^2 / eigens$values[1] +
+      (cbind(x - xcenter, y - ycenter) %*% (eigens$vectors[, 2]))^2 / eigens$values[2]
     ellipse_2 <- ellipse^2
 
     # Use parametric function of ellipse and ellipse^2
-    stk <- inla.stack(data = list(par = par), A = list(A, 1, 1, 1),
-                      effects = list(i = 1:spde$n.spde, m = rep(1, length(x)),
-                                     ell>ipse = ellipse, ellipse_2 = ellipse_2), tag = 'est')
-  } else if (shape == 'none') {
+    stk <- inla.stack(
+      data = list(par = par), A = list(A, 1, 1, 1),
+      effects = list(
+        i = 1:spde$n.spde, m = rep(1, length(x)),
+        ellipse = ellipse, ellipse_2 = ellipse_2
+      ), tag = "est"
+    )
+  } else if (shape == "none") {
     # No additional spatial covariates
-    stk <- inla.stack(data = list(par = par), A = list(A, 1),
-                      effects = list(i = 1:spde$n.spde, m = rep(1, length(x))), tag = 'est')
+    stk <- inla.stack(
+      data = list(par = par), A = list(A, 1),
+      effects = list(i = 1:spde$n.spde, m = rep(1, length(x))), tag = "est"
+    )
     eigens <- NULL
   } else {
     stop("Error: Invalid shape parameter.")
@@ -462,11 +519,11 @@ run_inla_model <- function(stk, par, epar, spde, tolerance, restart, shape) {
     stop("'stack' must inherit from class \"inla.data.stack\".")
   }
   # Determine the formula based on shape
-  if (shape == 'radius') {
+  if (shape == "radius") {
     formula <- par ~ 0 + m + radius + radius_2 + f(i, model = spde)
-  } else if (shape == 'ellipse') {
+  } else if (shape == "ellipse") {
     formula <- par ~ 0 + m + ellipse + ellipse_2 + f(i, model = spde)
-  } else if (shape == 'none') {
+  } else if (shape == "none") {
     formula <- par ~ 0 + m + f(i, model = spde)
   } else {
     stop("Error: Invalid shape parameter.")
@@ -474,12 +531,13 @@ run_inla_model <- function(stk, par, epar, spde, tolerance, restart, shape) {
 
   # Run the INLA model
   res <- inla(formula,
-              data = inla.stack.data(stk),
-              control.predictor = list(A = inla.stack.A(stk)),
-              scale = epar,
-              control.compute = list(openmp.strategy = 'huge'),
-              control.inla = list(tolerance = tolerance, restart = restart),
-              verbose = opts$verbose)
+    data = inla.stack.data(stk),
+    control.predictor = list(A = inla.stack.A(stk)),
+    scale = epar,
+    control.compute = list(openmp.strategy = "huge"),
+    control.inla = list(tolerance = tolerance, restart = restart),
+    verbose = opts$verbose
+  )
 
   return(res)
 }
@@ -506,17 +564,21 @@ run_inla_model <- function(stk, par, epar, spde, tolerance, restart, shape) {
 #' @return A list containing output and outputsd matrices.
 #'
 #' @examples
-#' projections <- project_inla_results(mesh, res, xini, xfin, yini,
-#'                                     yfin, xsize, ysize, zoom, shape,
-#'                                     xcenter, ycenter, eigens)
+#' projections <- project_inla_results(
+#'   mesh, res, xini, xfin, yini,
+#'   yfin, xsize, ysize, zoom, shape,
+#'   xcenter, ycenter, eigens
+#' )
 project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
                                  ysize, zoom, shape, xcenter, ycenter,
                                  eigens, spde) {
   # Create projector
-  projector <- inla.mesh.projector(mesh, xlim = c(xini, xfin), ylim = c(yini, yfin),
-                                   dim = zoom * c(xsize + 1, ysize + 1))
+  projector <- inla.mesh.projector(mesh,
+    xlim = c(xini, xfin), ylim = c(yini, yfin),
+    dim = zoom * c(xsize + 1, ysize + 1)
+  )
 
-  if (shape == 'radius') {
+  if (shape == "radius") {
     # Projection for radius
     px <- rep(projector$x, each = length(projector$y))
     py <- rep(projector$y, length(projector$x))
@@ -525,31 +587,34 @@ project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
 
     # Output with matrix to include radius function
     output <- inla.mesh.project(projector, res$summary.random$i$mean) +
-      t(matrix(as.numeric(res$summary.fixed$mean[1] +
-                            res$summary.fixed$mean[2] * projected_radius +
-                            res$summary.fixed$mean[3] * projected_radius_2),
-               nrow = zoom * (ysize + 1), ncol = zoom * (xsize + 1)))
-
-  } else if (shape == 'ellipse') {
+      t(matrix(
+        as.numeric(res$summary.fixed$mean[1] +
+          res$summary.fixed$mean[2] * projected_radius +
+          res$summary.fixed$mean[3] * projected_radius_2),
+        nrow = zoom * (ysize + 1), ncol = zoom * (xsize + 1)
+      ))
+  } else if (shape == "ellipse") {
     # Projection for ellipse
     px <- rep(projector$x, each = length(projector$y))
     py <- rep(projector$y, length(projector$x))
-    projected_ellipse <- (cbind(px - xcenter, py - ycenter) %*% (eigens$vectors[,1]))^2 / eigens$values[1] +
-      (cbind(px - xcenter, py - ycenter) %*% (eigens$vectors[,2]))^2 / eigens$values[2]
+    projected_ellipse <- (cbind(px - xcenter, py - ycenter) %*% (eigens$vectors[, 1]))^2 / eigens$values[1] +
+      (cbind(px - xcenter, py - ycenter) %*% (eigens$vectors[, 2]))^2 / eigens$values[2]
     projected_ellipse_2 <- projected_ellipse^2
 
     # Output with matrix to include ellipse function
     output <- inla.mesh.project(projector, res$summary.random$i$mean) +
-      t(matrix(as.numeric(res$summary.fixed$mean[1] +
-                            res$summary.fixed$mean[2] * projected_ellipse +
-                            res$summary.fixed$mean[3] * projected_ellipse_2),
-               nrow = zoom * (ysize + 1), ncol = zoom * (xsize + 1)))
-
-  } else if (shape == 'none') {
+      t(matrix(
+        as.numeric(res$summary.fixed$mean[1] +
+          res$summary.fixed$mean[2] * projected_ellipse +
+          res$summary.fixed$mean[3] * projected_ellipse_2),
+        nrow = zoom * (ysize + 1), ncol = zoom * (xsize + 1)
+      ))
+  } else if (shape == "none") {
     # Output without additional spatial functions
     output <- inla.mesh.project(projector, res$summary.random$i$mean) +
       t(matrix(as.numeric(res$summary.fixed$mean[1]),
-               nrow = zoom * (ysize + 1), ncol = zoom * (xsize + 1)))
+        nrow = zoom * (ysize + 1), ncol = zoom * (xsize + 1)
+      ))
   } else {
     stop("Error: Invalid shape parameter.")
   }
@@ -615,9 +680,9 @@ unscale_collected <- function(collected, scaling = opts$scaling) {
   return(collected)
 }
 
-#'------------------------------------------------------------------------------
+#' ------------------------------------------------------------------------------
 #' Save the results in npy files
-#'------------------------------------------------------------------------------
+#' ------------------------------------------------------------------------------
 
 #' Save multiple arrays from a named list to .npy files using numpy
 #'
@@ -630,13 +695,12 @@ unscale_collected <- function(collected, scaling = opts$scaling) {
 #' @return Invisibly returns a character vector of the full paths to the saved files.
 #' @examples
 #' \dontrun{
-#'   arrays <- list(
-#'     a = matrix(1:4, 2, 2),
-#'     b = matrix(5:8, 2, 2)
-#'   )
-#'   save_npy_list(arrays, "output_dir")
+#' arrays <- list(
+#'   a = matrix(1:4, 2, 2),
+#'   b = matrix(5:8, 2, 2)
+#' )
+#' save_npy_list(arrays, "output_dir")
 #' }
-
 save_npy <- function(array_list, dir_path) {
   if (!is.list(array_list)) {
     stop("Input must be a list of matrices or arrays.")
@@ -686,7 +750,8 @@ create_projector <- function(mesh, xlim, ylim, zoom, xsize, ysize) {
     mesh,
     xlim = xlim,
     ylim = ylim,
-    dim = zoom * c(xsize, ysize))
+    dim = zoom * c(xsize, ysize)
+  )
 }
 
 
@@ -707,14 +772,13 @@ compute_spatial_term <- function(projector, shape, res, xcenter, ycenter, eigens
   px <- rep(projector$x, each = length(projector$y))
   py <- rep(projector$y, length(projector$x))
 
-  if (shape == 'radius') {
+  if (shape == "radius") {
     # Radial distance from center point
     projected <- sqrt((px - xcenter)^2 + (py - ycenter)^2)
     term <- res$summary.fixed$mean[1] +
       res$summary.fixed$mean[2] * projected +
       res$summary.fixed$mean[3] * projected^2
-
-  } else if (shape == 'ellipse') {
+  } else if (shape == "ellipse") {
     # Mahalanobis distance using eigenvalue decomposition
     centered_coords <- cbind(px - xcenter, py - ycenter)
     projected <- (centered_coords %*% eigens$vectors[, 1])^2 / eigens$values[1] +
@@ -722,8 +786,7 @@ compute_spatial_term <- function(projector, shape, res, xcenter, ycenter, eigens
     term <- res$summary.fixed$mean[1] +
       res$summary.fixed$mean[2] * projected +
       res$summary.fixed$mean[3] * projected^2
-
-  } else if (shape == 'none') {
+  } else if (shape == "none") {
     # Constant intercept only
     term <- res$summary.fixed$mean[1]
   } else {
@@ -759,18 +822,25 @@ process_validation <- function(valid, tx, ty, logimg, weight, tepar, mesh) {
 
   # Create gridded observation matrix
   timage <- matrix(NA,
-                   nrow = length(unique(ty)),
-                   ncol = length(unique(tx)))
-  timage[cbind(as.numeric(factor(ty[valid])),  # Map to grid indices
-               as.numeric(factor(tx[valid])))] <- params$par
+    nrow = length(unique(ty)),
+    ncol = length(unique(tx))
+  )
+  timage[cbind(
+    as.numeric(factor(ty[valid])), # Map to grid indices
+    as.numeric(factor(tx[valid]))
+  )] <- params$par
 
   # Create error matrix if available
   terrimage <- if (!is.null(params$epar)) {
     matrix(NA, nrow = length(unique(ty)), ncol = length(unique(tx)))
-    terrimage[cbind(as.numeric(factor(ty[valid])),
-                    as.numeric(factor(tx[valid])))] <- sqrt(params$epar)
+    terrimage[cbind(
+      as.numeric(factor(ty[valid])),
+      as.numeric(factor(tx[valid]))
+    )] <- sqrt(params$epar)
     terrimage
-  } else NULL
+  } else {
+    NULL
+  }
 
   list(
     timage = timage,
@@ -810,17 +880,21 @@ process_validation <- function(valid, tx, ty, logimg, weight, tepar, mesh) {
 #'   - x,y,z,erz: Validation data in original coordinates
 #' @examples
 #' # Basic projection
-#' results <- project_inla_results_collect(mesh, res, 0, 10, 0, 10, 100, 100, 2, 'none')
+#' results <- project_inla_results_collect(mesh, res, 0, 10, 0, 10, 100, 100, 2, "none")
 #'
 #' # With validation data
-#' val_results <- project_inla_results_collect(mesh, res, 0, 10, 0, 10, 100, 100, 2, 'radius',
-#'                                            valid = val_indices, tx = xcoords, ty = ycoords)
-project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsize, ysize, zoom,
-                                         shape, xcenter, ycenter, eigens, spde, valid = NULL,
-                                         tx = NULL, ty = NULL, logimg = NULL, weight = NULL,
+#' val_results <- project_inla_results_collect(mesh, res, 0, 10, 0, 10, 100, 100, 2, "radius",
+#'   valid = val_indices, tx = xcoords, ty = ycoords
+#' )
+project_inla_results_collect <- function(mesh, res, xini, xfin,
+                                         yini, yfin, xsize, ysize, zoom,
+                                         shape, xcenter, ycenter,
+                                         eigens, spde, valid = NULL,
+                                         tx = NULL, ty = NULL,
+                                         logimg = NULL, weight = NULL,
                                          tepar = NULL) {
   if (is.null(mesh) || is.null(res)) {
-      stop("Error: Mesh and result inputs cannot be NULL.")
+    stop("Error: Mesh and result inputs cannot be NULL.")
   }
   # 1. Initialize projection grid
   projector <- create_projector(mesh, c(xini, xfin), c(yini, yfin), zoom, xsize, ysize)
@@ -838,7 +912,7 @@ project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsiz
   # 4. Project random effects and combine with trend
   random_effects <- inla.mesh.project(projector, res$summary.random$i$mean)
   output <- (random_effects) +
-   t(matrix(spatial_term, nrow = zoom * (ysize), ncol = zoom * (xsize)))
+    t(matrix(spatial_term, nrow = zoom * (ysize), ncol = zoom * (xsize)))
 
   # 5. Project standard deviations
   outputsd <- inla.mesh.project(projector, res$summary.random$i$sd)
@@ -846,24 +920,26 @@ project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsiz
   # 6. Process validation data if provided
   validation_data <- if (!is.null(valid)) {
     process_validation(valid, tx, ty, logimg, weight, tepar, mesh)
-  } else NULL
+  } else {
+    NULL
+  }
 
-  #7. Check if out and image dimensions match
+  # 7. Check if out and image dimensions match
   if (!is.null(validation_data)) {
     if (any(dim(output) != dim(validation_data$timage))) {
       stop("Error: Dimensions of output and validation data do not match.")
-    }
-    else {
+    } else {
       print("HURRAY")
     }
+  } else {
+    print("empty")
   }
-  else {print("empty")}
 
   # 8. Return comprehensive results
   list(
     out = t(output),
     outsd = t(outputsd),
-    image = validation_data$timage %||% NULL,  # Using %||% for null coalescing
+    image = validation_data$timage %||% NULL, # Using %||% for null coalescing
     erimage = validation_data$terrimage %||% NULL,
     x = validation_data$x %||% NULL,
     y = validation_data$y %||% NULL,
@@ -874,195 +950,198 @@ project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsiz
 
 # ---- Pipeline Execution ----
 
-tryCatch({
-  # 1. Load file path from options
-  npy_path <- opts$`path-file` %||% stop("Error: 'path-file' option is not set.")
-  print(npy_path)
-  cat("Debug: npy_path loaded:", npy_path, "\n")
+tryCatch(
+  {
+    # 1. Load file path from options
+    npy_path <- opts$`path-file` %||% stop("Error: 'path-file' option is not set.")
+    print(npy_path)
+    cat("Debug: npy_path loaded:", npy_path, "\n")
 
-  # 2. Load and process data
-  cat("Debug: Loading npy data from", npy_path, "\n")
-  raw_data <- load_npy(npy_path)
-  cat("Debug: raw_data loaded, dim:", paste(dim(raw_data), collapse = "x"), "\n")
+    # 2. Load and process data
+    cat("Debug: Loading npy data from", npy_path, "\n")
+    raw_data <- load_npy(npy_path)
+    cat("Debug: raw_data loaded, dim:", paste(dim(raw_data), collapse = "x"), "\n")
 
-  # 2.5 Plot the image (optional)
-  # image(t(raw_data)[, nrow(raw_data):1], col = heat.colors(256), main = "Corrected Orientation")
+    # 2.5 Plot the image (optional)
+    # image(t(raw_data)[, nrow(raw_data):1], col = heat.colors(256), main = "Corrected Orientation")
 
-  # 3. Prepare data
-  print("Prepare_data")
-  cat("Debug: Calling prepare_data\n")
-  inla_variables <- prepare_data(raw_data, scaling = opts$scaling)
-  cat("Debug: prepare_data returned, names:", paste(names(inla_variables), collapse = ", "), "\n")
+    # 3. Prepare data
+    print("Prepare_data")
+    cat("Debug: Calling prepare_data\n")
+    inla_variables <- prepare_data(raw_data, scaling = opts$scaling)
+    cat("Debug: prepare_data returned, names:", paste(names(inla_variables), collapse = ", "), "\n")
 
-  # 4. Validate data
-  print("Check_data_validity")
-  cat("Debug: Calling check_data_validity\n")
-  check_data_validity(
-    valid = inla_variables$valid,
-    tx = inla_variables$x,
-    ty = inla_variables$y,
-    logimg = inla_variables$logimg,
-    img = inla_variables$img
-  )
-  cat("Debug: check_data_validity completed\n")
+    # 4. Validate data
+    print("Check_data_validity")
+    cat("Debug: Calling check_data_validity\n")
+    check_data_validity(
+      valid = inla_variables$valid,
+      tx = inla_variables$x,
+      ty = inla_variables$y,
+      logimg = inla_variables$logimg,
+      img = inla_variables$img
+    )
+    cat("Debug: check_data_validity completed\n")
 
-  # 5. Compute parameters
-  print("Compute_parameters")
-  cat("Debug: Calling compute_parameters\n")
-  model_params <- compute_parameters(
-    valid = inla_variables$valid,
-    tx = inla_variables$x,
-    ty = inla_variables$y,
-    logimg = inla_variables$logimg,
-    weight = 1
-  )
-  cat("Debug: compute_parameters returned, names:", paste(names(model_params), collapse = ", "), "\n")
+    # 5. Compute parameters
+    print("Compute_parameters")
+    cat("Debug: Calling compute_parameters\n")
+    model_params <- compute_parameters(
+      valid = inla_variables$valid,
+      tx = inla_variables$x,
+      ty = inla_variables$y,
+      logimg = inla_variables$logimg,
+      weight = 1
+    )
+    cat("Debug: compute_parameters returned, names:", paste(names(model_params), collapse = ", "), "\n")
 
-  # 6. Create mesh
-  print("Create_mesh")
-  cat("Debug: Calling create_inla_mesh\n")
-  inla_mesh <- create_inla_mesh(model_params$x, model_params$y)
-  cat("Debug: create_inla_mesh returned\n")
+    # 6. Create mesh
+    print("Create_mesh")
+    cat("Debug: Calling create_inla_mesh\n")
+    inla_mesh <- create_inla_mesh(model_params$x, model_params$y)
+    cat("Debug: create_inla_mesh returned\n")
 
-  # 7. Define SPDE model
-  print("Define_SPDE_model")
-  cat("Debug: Calling define_spde_model\n")
-  spde_model <- define_spde_model(
-    inla_mesh,
-    stationary = opts$stationary,
-    p_prob = opts$`prior-range-prob`,
-    p_lower = opts$`prior-range-lower`,
-    sigma_prob = opts$`prior-sigma-prob`,
-    sigma_upper = opts$`prior-sigma-upper`,
-    nbasis = opts$nbasis,
-    degree = opts$`spline-degree`,
-    alpha = opts$alpha
-  )
-  cat("Debug: define_spde_model returned\n")
+    # 7. Define SPDE model
+    print("Define_SPDE_model")
+    cat("Debug: Calling define_spde_model\n")
+    spde_model <- define_spde_model(
+      inla_mesh,
+      stationary = opts$stationary,
+      p_prob = opts$`prior-range-prob`,
+      p_lower = opts$`prior-range-lower`,
+      sigma_prob = opts$`prior-sigma-prob`,
+      sigma_upper = opts$`prior-sigma-upper`,
+      nbasis = opts$nbasis,
+      degree = opts$`spline-degree`,
+      alpha = opts$alpha
+    )
+    cat("Debug: define_spde_model returned\n")
 
-  # 8. Create projection matrix
-  print("Create_projection_matrix")
-  cat("Debug: Calling inla.spde.make.A\n")
-  projection_matrix_A <- inla.spde.make.A(inla_mesh,
-                                          loc = cbind(model_params$x, model_params$y))
-  cat("Debug: inla.spde.make.A returned, dim:", paste(dim(projection_matrix_A), collapse = "x"), "\n")
+    # 8. Create projection matrix
+    print("Create_projection_matrix")
+    cat("Debug: Calling inla.spde.make.A\n")
+    projection_matrix_A <- inla.spde.make.A(inla_mesh,
+      loc = cbind(model_params$x, model_params$y)
+    )
+    cat("Debug: inla.spde.make.A returned, dim:", paste(dim(projection_matrix_A), collapse = "x"), "\n")
 
-  # 9. Prepare model stack
-  print("Prepare_model_stack")
-  cat("Debug: Calling prepare_model_stack\n")
-  model_stack <- prepare_model_stack(
-    shape = opts$shape,
-    x = model_params$x,
-    y = model_params$y,
-    par = model_params$par,
-    A = projection_matrix_A,
-    spde = spde_model,
-    weight = 1,
-    xcenter = model_params$xcenter,
-    ycenter = model_params$ycenter
-  )
-  cat("Debug: prepare_model_stack returned, names:", paste(names(model_stack), collapse = ", "), "\n")
+    # 9. Prepare model stack
+    print("Prepare_model_stack")
+    cat("Debug: Calling prepare_model_stack\n")
+    model_stack <- prepare_model_stack(
+      shape = "none",
+      x = model_params$x,
+      y = model_params$y,
+      par = model_params$par,
+      A = projection_matrix_A,
+      spde = spde_model,
+      weight = 1,
+      xcenter = model_params$xcenter,
+      ycenter = model_params$ycenter
+    )
+    cat("Debug: prepare_model_stack returned, names:", paste(names(model_stack), collapse = ", "), "\n")
 
-  # 10. Run INLA model
-  print("INLA results")
-  cat("Debug: Calling run_inla_model\n")
-  inla_result <- run_inla_model(
-    stk = model_stack$stk,
-    par = model_params$par,
-    epar = model_params$epar,
-    spde = spde_model,
-    tolerance = 1e-4,
-    restart = 0L,
-    shape = 'none'
-  )
-  cat("Debug: run_inla_model returned\n")
+    # 10. Run INLA model
+    print("INLA results")
+    cat("Debug: Calling run_inla_model\n")
+    inla_result <- run_inla_model(
+      stk = model_stack$stk,
+      par = model_params$par,
+      epar = model_params$epar,
+      spde = spde_model,
+      tolerance = 1e-4,
+      restart = 0L,
+      shape = "none"
+    )
+    cat("Debug: run_inla_model returned\n")
 
-  # 11. Project results
-  print("Project results")
-  cat("Debug: Calling project_inla_results_collect\n")
-  projected_results <- project_inla_results_collect(
-    mesh = inla_mesh,
-    res = inla_result,
-    xini = 0,
-    xfin = inla_variables$xfin,
-    yini = 0,
-    yfin = inla_variables$yfin,
-    xsize = inla_variables$xsize,
-    ysize = inla_variables$ysize,
-    zoom = 1,
-    shape = 'none',
-    xcenter = model_params$xcenter,
-    ycenter = model_params$ycenter,
-    eigens = model_stack$eigens
-  )
-  cat("Debug: project_inla_results_collect returned, dim:", paste(dim(projected_results), collapse = "x"), "\n")
+    # 11. Project results
+    print("Project results")
+    cat("Debug: Calling project_inla_results_collect\n")
+    projected_results <- project_inla_results_collect(
+      mesh = inla_mesh,
+      res = inla_result,
+      xini = 0,
+      xfin = inla_variables$xfin,
+      yini = 0,
+      yfin = inla_variables$yfin,
+      xsize = inla_variables$xsize,
+      ysize = inla_variables$ysize,
+      zoom = 1,
+      shape = "none",
+      xcenter = model_params$xcenter,
+      ycenter = model_params$ycenter,
+      eigens = model_stack$eigens
+    )
+    cat("Debug: project_inla_results_collect returned, dim:", paste(dim(projected_results), collapse = "x"), "\n")
 
-  # 12. Collect results
-  print("INLA collect")
-  cat("Debug: Calling project_inla_results_collect again for collection\n")
-  inla_results_collected <- project_inla_results_collect(
-    mesh = inla_mesh,
-    res = inla_result,
-    xini = 0,
-    xfin = inla_variables$xfin,
-    yini = 0,
-    yfin = inla_variables$yfin,
-    xsize = inla_variables$xsize,
-    ysize = inla_variables$ysize,
-    zoom = 1,
-    shape = 'none',
-    xcenter = model_params$xcenter,
-    ycenter = model_params$ycenter,
-    eigens = model_stack$eigens
-  )
-  cat("Debug: project_inla_results_collect (collection) returned, dim:", paste(dim(inla_results_collected), collapse = "x"), "\n")
+    # 12. Collect results
+    print("INLA collect")
+    cat("Debug: Calling project_inla_results_collect again for collection\n")
+    inla_results_collected <- project_inla_results_collect(
+      mesh = inla_mesh,
+      res = inla_result,
+      xini = 0,
+      xfin = inla_variables$xfin,
+      yini = 0,
+      yfin = inla_variables$yfin,
+      xsize = inla_variables$xsize,
+      ysize = inla_variables$ysize,
+      zoom = 1,
+      shape = "none",
+      xcenter = model_params$xcenter,
+      ycenter = model_params$ycenter,
+      eigens = model_stack$eigens
+    )
+    cat("Debug: project_inla_results_collect (collection) returned, dim:", paste(dim(inla_results_collected), collapse = "x"), "\n")
 
-  # 13. Unscale results
-  print("Unscale results")
-  cat("Debug: Calling unscale_collected\n")
-  unscaled_results <- unscale_collected(inla_results_collected, scaling = opts$scaling)
-  cat("Debug: unscale_collected returned, dim:", paste(dim(unscaled_results), collapse = "x"), "\n")
+    # 13. Unscale results
+    print("Unscale results")
+    cat("Debug: Calling unscale_collected\n")
+    unscaled_results <- unscale_collected(inla_results_collected, scaling = opts$scaling)
+    cat("Debug: unscale_collected returned, dim:", paste(dim(unscaled_results), collapse = "x"), "\n")
 
-  # 13.5 Plot the image (optional)
-  # image(t(unscaled_results)[, nrow(unscaled_results):1], col = heat.colors(256), main = "Corrected Orientation")
+    # 13.5 Plot the image (optional)
+    # image(t(unscaled_results)[, nrow(unscaled_results):1], col = heat.colors(256), main = "Corrected Orientation")
 
-  # 14. Save output
-  print("Save output")
-  output_dir <- "INLA_output_NPY"
-  if (!dir.exists(output_dir)) {
-    dir.create(output_dir)
-    cat("Debug: Created output directory", output_dir, "\n")
+    # 14. Save output
+    print("Save output")
+    output_dir <- "INLA_output_NPY"
+    if (!dir.exists(output_dir)) {
+      dir.create(output_dir)
+      cat("Debug: Created output directory", output_dir, "\n")
+    }
+    # fname is npy_path without the npy extension
+    fname <- sub("\\.npy$", "", basename(npy_path))
+    out_path <- file.path(output_dir, fname)
+    cat("Debug: Saving output to", out_path, "\n")
+    save_npy(unscaled_results, out_path)
+    cat("Debug: Output saved to", out_path, "\n")
+
+    message("\n ✅  Pipeline completed successfully. Results saved to:\n", out_path)
+  },
+  error = function(e) {
+    message("\n ❌ Pipeline failed with error:\n", conditionMessage(e))
+    quit(status = 1)
+
+    # 13. Save output (replace existing steps 13-14)
+    print("Saving results")
+    output_dir <- "INLA_output" # Base directory for all outputs
+    prefix <- sub("\\.npy$", "", basename(npy_path)) # Use input filename as prefix
+
+    # Save results (NPY + PNG by default)
+    saved_files <- save_inla_results(
+      results = inla_results_collected,
+      base_path = output_dir,
+      prefix = prefix,
+      save_npy = TRUE,
+      save_csv = FALSE, # Set to TRUE if CSV is needed
+      save_png = TRUE,
+      scale = op # Apply 10^x scaling (same as unscale_collected)
+    )
+
+    message("\n ✅  Pipeline completed successfully. Results saved to:\n", output_dir)
+    message("NPY files: ", paste(saved_files$npy, collapse = "\n"))
+    message("PNG plots: ", paste(saved_files$png, collapse = "\n"))
   }
-  # fname is npy_path without the npy extension
-  fname <- sub("\\.npy$", "", basename(npy_path))
-  out_path <- file.path(output_dir, fname)
-  cat("Debug: Saving output to", out_path, "\n")
-  save_npy(unscaled_results, out_path)
-  cat("Debug: Output saved to", out_path, "\n")
-
-  message("\n ✅  Pipeline completed successfully. Results saved to:\n", out_path)
-
-}, error = function(e) {
-  message("\n ❌ Pipeline failed with error:\n", conditionMessage(e))
-  quit(status = 1)
-
-  # 13. Save output (replace existing steps 13-14)
-  print("Saving results")
-  output_dir <- "INLA_output"  # Base directory for all outputs
-  prefix <- sub("\\.npy$", "", basename(npy_path))  # Use input filename as prefix
-
-  # Save results (NPY + PNG by default)
-  saved_files <- save_inla_results(
-    results = inla_results_collected,
-    base_path = output_dir,
-    prefix = prefix,
-    save_npy = TRUE,
-    save_csv = FALSE,  # Set to TRUE if CSV is needed
-    save_png = TRUE,
-    scale = op  # Apply 10^x scaling (same as unscale_collected)
-  )
-
-  message("\n ✅  Pipeline completed successfully. Results saved to:\n", output_dir)
-  message("NPY files: ", paste(saved_files$npy, collapse = "\n"))
-  message("PNG plots: ", paste(saved_files$png, collapse = "\n"))
-})
+)
