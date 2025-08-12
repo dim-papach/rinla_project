@@ -125,6 +125,8 @@ opts <- parse_args(opt_parser)
 # Set INLA options based on parsed arguments
 inla.setOption(num.threads = opts$`num-threads`)
 inla.setOption(blas.num.threads = opts$`num-threads`)
+inla.setOption(verbose = opts$verbose)
+inla.set.control.compute.default(openmp.strategy = opts$`openmp-strategy`)
 
 # Display configuration
 cat("=== INLA CONFIGURATION ===\n")
@@ -514,20 +516,33 @@ prepare_model_stack <- function(shape = opts$shape,
 #'
 #' @examples
 #' res <- run_inla_model(stk, par, epar, spde, tolerance, restart, shape)
-run_inla_model <- function(stk, par, epar, spde, tolerance, restart, shape) {
+run_inla_model <- function(stk, par, epar, spde,
+                           tolerance = opts$tolerance,
+                           restart = opts$restart, shape = opts$shape) {
   if (is.null(stk) || !inherits(stk, "inla.data.stack")) {
     stop("'stack' must inherit from class \"inla.data.stack\".")
   }
   # Determine the formula based on shape
-  if (shape == "radius") {
-    formula <- par ~ 0 + m + radius + radius_2 + f(i, model = spde)
-  } else if (shape == "ellipse") {
-    formula <- par ~ 0 + m + ellipse + ellipse_2 + f(i, model = spde)
-  } else if (shape == "none") {
-    formula <- par ~ 0 + m + f(i, model = spde)
-  } else {
+  formula <- switch(shape,
+    radius = par ~ 0 + m + radius + radius_2 + f(i, model = spde),
+    ellipse = par ~ 0 + m + ellipse + ellipse_2 + f(i, model = spde),
+    none = par ~ 0 + m + f(i, model = spde),
     stop("Error: Invalid shape parameter.")
-  }
+  )
+  cat("Debug: Running INLA model with formula:\n", deparse(formula), "\n")
+  # Print the stack data for debugging
+  cat("Debug: Stack data:\n")
+  print(inla.stack.data(stk))
+  # Print the stack A matrix for debugging
+  cat("Debug: Stack A matrix:\n")
+  print(inla.stack.A(stk))
+  # Print the stack effects for debugging
+  cat("Debug: Stack effects:\n")
+  print(inla.stack.effects(stk))
+  # Print the stack tag for debugging
+  cat("Debug: Stack tag:\n")
+  print(inla.stack.tag(stk))
+  
 
   # Run the INLA model
   res <- inla(formula,
@@ -1049,9 +1064,9 @@ tryCatch(
       par = model_params$par,
       epar = model_params$epar,
       spde = spde_model,
-      tolerance = 1e-4,
-      restart = 0L,
-      shape = "none"
+      tolerance = opts$tolerance,
+      restart = opts$restart,
+      shape = opts$shape
     )
     cat("Debug: run_inla_model returned\n")
 
