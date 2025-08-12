@@ -125,7 +125,6 @@ opts <- parse_args(opt_parser)
 # Set INLA options based on parsed arguments
 inla.setOption(num.threads = opts$`num-threads`)
 inla.setOption(blas.num.threads = opts$`num-threads`)
-inla.setOption(verbose = opts$verbose)
 inla.set.control.compute.default(openmp.strategy = opts$`openmp-strategy`)
 
 # Display configuration
@@ -536,19 +535,14 @@ run_inla_model <- function(stk, par, epar, spde,
   # Print the stack A matrix for debugging
   cat("Debug: Stack A matrix:\n")
   print(inla.stack.A(stk))
-  # Print the stack effects for debugging
-  cat("Debug: Stack effects:\n")
-  print(inla.stack.effects(stk))
-  # Print the stack tag for debugging
-  cat("Debug: Stack tag:\n")
-  print(inla.stack.tag(stk))
   
 
   # Run the INLA model
   res <- inla(formula,
     data = inla.stack.data(stk),
     control.predictor = list(A = inla.stack.A(stk)),
-    scale = epar
+    scale = epar,
+    verbose = opts$verbose
   )
 
   return(res)
