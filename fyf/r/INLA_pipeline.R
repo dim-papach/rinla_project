@@ -529,13 +529,6 @@ run_inla_model <- function(stk, par, epar, spde,
     stop("Error: Invalid shape parameter.")
   )
   cat("Debug: Running INLA model with formula:\n", deparse(formula), "\n")
-  # Print the stack data for debugging
-  cat("Debug: Stack data:\n")
-  print(inla.stack.data(stk))
-  # Print the stack A matrix for debugging
-  cat("Debug: Stack A matrix:\n")
-  print(inla.stack.A(stk))
-  
 
   # Run the INLA model
   res <- inla(formula,
