@@ -548,7 +548,7 @@ run_inla_model <- function(stk, par, epar, spde,
   res <- inla(formula,
     data = inla.stack.data(stk),
     control.predictor = list(A = inla.stack.A(stk)),
-    scale = epar,
+    scale = epar
   )
 
   return(res)
