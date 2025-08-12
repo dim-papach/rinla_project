@@ -549,9 +549,6 @@ run_inla_model <- function(stk, par, epar, spde,
     data = inla.stack.data(stk),
     control.predictor = list(A = inla.stack.A(stk)),
     scale = epar,
-    control.compute = list(openmp.strategy = "huge"),
-    control.inla = list(tolerance = tolerance, restart = restart),
-    verbose = opts$verbose
   )
 
   return(res)
