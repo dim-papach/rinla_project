@@ -401,7 +401,11 @@ define_spde_model <- function(mesh, stationary = opts$stationary,
 #'
 #' @examples
 #' stk <- prepare_model_stack(shape, x, y, par, A, spde, weight, xcenter, ycenter)
-prepare_model_stack <- function(shape, x, y, par, A, spde, weight, xcenter, ycenter) {
+prepare_model_stack <- function(shape = opts$shape,
+                                x, y, par, A, spde,
+                                weight, xcenter, ycenter) {
+  eigens <- NULL
+
   if (shape == 'radius') {
     radius <- sqrt((x - xcenter)^2 + (y - ycenter)^2)
     radius_2 <- (x - xcenter)^2 + (y - ycenter)^2
@@ -409,8 +413,8 @@ prepare_model_stack <- function(shape, x, y, par, A, spde, weight, xcenter, ycen
     # Use parametric function of radius and radius^2
     stk <- inla.stack(data = list(par = par), A = list(A, 1, 1, 1),
                       effects = list(i = 1:spde$n.spde, m = rep(1, length(x)),
-                                     radius = radius, radius_2 = radius_2), tag = 'est')
-    eigens <- NULL
+                                     radius = radius, radius_2 = radius_2),
+                                     tag = 'est')
   } else if (shape == 'ellipse') {
     # Compute weighted covariance
     m_weights <- rep(weight, length(x))
@@ -424,7 +428,7 @@ prepare_model_stack <- function(shape, x, y, par, A, spde, weight, xcenter, ycen
     # Use parametric function of ellipse and ellipse^2
     stk <- inla.stack(data = list(par = par), A = list(A, 1, 1, 1),
                       effects = list(i = 1:spde$n.spde, m = rep(1, length(x)),
-                                     ellipse = ellipse, ellipse_2 = ellipse_2), tag = 'est')
+                                     ell>ipse = ellipse, ellipse_2 = ellipse_2), tag = 'est')
   } else if (shape == 'none') {
     # No additional spatial covariates
     stk <- inla.stack(data = list(par = par), A = list(A, 1),
@@ -947,7 +951,7 @@ tryCatch({
   print("Prepare_model_stack")
   cat("Debug: Calling prepare_model_stack\n")
   model_stack <- prepare_model_stack(
-    shape = 'none',
+    shape = opts$shape,
     x = model_params$x,
     y = model_params$y,
     par = model_params$par,
