@@ -569,7 +569,8 @@ run_inla_model <- function(stk, par, epar, spde,
 #'   xcenter, ycenter, eigens
 #' )
 project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
-                                 ysize, zoom, shape = opts$shape, xcenter, ycenter,
+                                 ysize, zoom, shape = opts$shape,
+                                 xcenter, ycenter,
                                  eigens, spde) {
   # Create projector
   projector <- inla.mesh.projector(mesh,
@@ -1074,33 +1075,13 @@ tryCatch(
     )
     cat("Debug: project_inla_results_collect returned, dim:", paste(dim(projected_results), collapse = "x"), "\n")
 
-    # 12. Collect results
-    print("INLA collect")
-    cat("Debug: Calling project_inla_results_collect again for collection\n")
-    inla_results_collected <- project_inla_results_collect(
-      mesh = inla_mesh,
-      res = inla_result,
-      xini = 0,
-      xfin = inla_variables$xfin,
-      yini = 0,
-      yfin = inla_variables$yfin,
-      xsize = inla_variables$xsize,
-      ysize = inla_variables$ysize,
-      zoom = 1,
-      shape = "none",
-      xcenter = model_params$xcenter,
-      ycenter = model_params$ycenter,
-      eigens = model_stack$eigens
-    )
-    cat("Debug: project_inla_results_collect (collection) returned, dim:", paste(dim(inla_results_collected), collapse = "x"), "\n")
-
-    # 13. Unscale results
+    # 12. Unscale results
     print("Unscale results")
     cat("Debug: Calling unscale_collected\n")
     unscaled_results <- unscale_collected(inla_results_collected, scaling = opts$scaling)
     cat("Debug: unscale_collected returned, dim:", paste(dim(unscaled_results), collapse = "x"), "\n")
 
-    # 13.5 Plot the image (optional)
+    # 13 Plot the image (optional)
     # image(t(unscaled_results)[, nrow(unscaled_results):1], col = heat.colors(256), main = "Corrected Orientation")
 
     # 14. Save output
@@ -1123,7 +1104,7 @@ tryCatch(
     message("\n ❌ Pipeline failed with error:\n", conditionMessage(e))
     quit(status = 1)
 
-    # 13. Save output (replace existing steps 13-14)
+    # 15. Save output (replace existing steps 13-14)
     print("Saving results")
     output_dir <- "INLA_output" # Base directory for all outputs
     prefix <- sub("\\.npy$", "", basename(npy_path)) # Use input filename as prefix
