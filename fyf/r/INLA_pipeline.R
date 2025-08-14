@@ -77,7 +77,7 @@ option_list <- list(
 
   # SPDE parameters
   make_option("--alpha",
-    type = "integer", default = 2L,
+    type = "double", default = 2,
     help = "SPDE smoothness parameter (1 or 2) [default: %default]"
   ),
   make_option("--prior-range-prob",
@@ -1078,7 +1078,7 @@ tryCatch(
     # 12. Unscale results
     print("Unscale results")
     cat("Debug: Calling unscale_collected\n")
-    unscaled_results <- unscale_collected(inla_results_collected, scaling = opts$scaling)
+    unscaled_results <- unscale_collected(projected_results, scaling = opts$scaling)
     cat("Debug: unscale_collected returned, dim:", paste(dim(unscaled_results), collapse = "x"), "\n")
 
     # 13 Plot the image (optional)

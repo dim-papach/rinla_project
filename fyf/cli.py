@@ -246,7 +246,7 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.option('--outer-edge-factor', type=float, help='Outer edge factor for mesh')
 @click.option('--offset-inner-factor', type=float, help='Inner offset factor for mesh')
 @click.option('--offset-outer-factor', type=float, help='Outer offset factor for mesh')
-@click.option('--alpha', type=int, help='SPDE smoothness parameter (1 or 2)')
+@click.option('--alpha', type=float, help='SPDE smoothness parameter (1 or 2)')
 @click.option('--prior-range-prob', type=float, help='Prior probability for range parameter')
 @click.option('--prior-range-lower', type=float, help='Lower bound for range prior')
 @click.option('--prior-sigma-prob', type=float, help='Prior probability for sigma parameter')
