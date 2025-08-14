@@ -569,7 +569,7 @@ run_inla_model <- function(stk, par, epar, spde,
 #'   xcenter, ycenter, eigens
 #' )
 project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
-                                 ysize, zoom, shape, xcenter, ycenter,
+                                 ysize, zoom, shape = opts$shape, xcenter, ycenter,
                                  eigens, spde) {
   # Create projector
   projector <- inla.mesh.projector(mesh,
@@ -1067,7 +1067,7 @@ tryCatch(
       xsize = inla_variables$xsize,
       ysize = inla_variables$ysize,
       zoom = 1,
-      shape = "none",
+      shape = opts$shape,
       xcenter = model_params$xcenter,
       ycenter = model_params$ycenter,
       eigens = model_stack$eigens
