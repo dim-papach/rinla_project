@@ -345,14 +345,18 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
         restart=process_config.get('restart', 0)
     )
     
-    # Set output directory
-    output_dir = Path(process_config.get('output_dir', './processed'))
-    output_dir.mkdir(parents=True, exist_ok=True)
+    final_base_output_dir: Optional[Path] = None
+    if process_config.get('output_dir'):
+        final_base_output_dir = Path(process_config['output_dir'])
+        final_base_output_dir.mkdir(parents=True, exist_ok=True)
     
     # Display configuration
     echo_colored(f"INLA shape: {inla_cfg.shape}", Colors.INFO)
     echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
-    echo_colored(f"Output directory: {output_dir}", Colors.INFO)
+    if final_base_output_dir:
+        echo_colored(f"Output directory: {final_base_output_dir}", Colors.INFO)
+    else:
+        echo_colored(f"Output directory: Each file's original directory", Colors.INFO)
     
     # Initialize file handler and processor
     file_handler = FileHandler()
@@ -366,10 +370,16 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
                 variants = {'original': data}
                 
                 basename = file_path.stem
-                file_output_dir = output_dir / basename
-                file_output_dir.mkdir(parents=True, exist_ok=True)
                 
-                processed = processor.process_variants(variants, inla_cfg, str(file_output_dir))
+                current_file_output_dir: Path
+                if final_base_output_dir:
+                    current_file_output_dir = final_base_output_dir / basename
+                else:
+                    current_file_output_dir = file_path.parent
+                
+                current_file_output_dir.mkdir(parents=True, exist_ok=True)
+                
+                processed = processor.process_variants(variants, inla_cfg, str(current_file_output_dir))
                 
                 if processed.get('original') is not None:
                     # Save results as FITS
@@ -378,7 +388,7 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
                     if processed.get('original_uncertainty') is not None:
                         results_to_save['uncertainty'] = processed['original_uncertainty']
                         
-                    file_handler.save_outputs(file_output_dir, results_to_save, {}, header)
+                    file_handler.save_outputs(current_file_output_dir, results_to_save, {}, header)
                     
                     echo_colored(f"✓ {file_path.name}: Success", Colors.SUCCESS)
                 else:
