@@ -9,6 +9,7 @@ __pycache__
 *.Rproj
 
 *.fits
+*.fit
 /roast.fits
 /O1_6300s_masked.fits
 /variants/
