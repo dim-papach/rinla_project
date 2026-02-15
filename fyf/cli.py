@@ -364,9 +364,22 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
             try:
                 data, header = file_handler.load_fits(file_path)
                 variants = {'original': data}
-                processed = processor.process_variants(variants, inla_cfg, str(output_dir))
+                
+                basename = file_path.stem
+                file_output_dir = output_dir / basename
+                file_output_dir.mkdir(parents=True, exist_ok=True)
+                
+                processed = processor.process_variants(variants, inla_cfg, str(file_output_dir))
                 
                 if processed.get('original') is not None:
+                    # Save results as FITS
+                    results_to_save = {'processed': processed['original']}
+                    
+                    if processed.get('original_uncertainty') is not None:
+                        results_to_save['uncertainty'] = processed['original_uncertainty']
+                        
+                    file_handler.save_outputs(file_output_dir, results_to_save, {}, header)
+                    
                     echo_colored(f"✓ {file_path.name}: Success", Colors.SUCCESS)
                 else:
                     echo_colored(f"✗ {file_path.name}: Failed", Colors.ERROR)

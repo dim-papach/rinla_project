@@ -188,15 +188,16 @@ class SimulationPipeline:
             metrics = {}
             for key, proc_data in processed.items():
                 if proc_data is not None:
+                    if key.endswith('_uncertainty'):
+                        print(f"Debug: Skipping validation for {key} (Uncertainty map)")
+                        continue
+                        
                     print(f"Debug: Validating {key}")
                     metrics[key] = validate_images(variants['original'], proc_data)
-                    print(f"Debug: Metrics for {key}: {metrics[key]}")
                 else:
-                    print(f"Debug: Skipping validation for {key} (None)")
-            
-            result['metrics'] = metrics
-            result['success'] = True
-            print(f"Debug: process_file for {input_path} completed successfully")
+                    result['metrics'] = metrics
+                    result['success'] = True
+                    print(f"Debug: process_file for {input_path} completed successfully")
             
         except (ValueError, OSError, RuntimeError) as e:
             print(f"Error processing {input_path.name}: {str(e)}")

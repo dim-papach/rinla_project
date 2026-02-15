@@ -275,11 +275,17 @@ class FitsProcessor:
                     
                     # 5. Load processed result
                     output_path = os.path.join(variant_output_dir, "out.npy")
+                    output_sd_path = os.path.join(variant_output_dir, "outsd.npy")
                     print(f"Debug: Checking for output file: {output_path}")
                     
                     if os.path.exists(output_path):
                         processed[variant_name] = np.load(output_path)
                         print(f"Debug: Loaded output from {output_path}")
+                        
+                        # Load uncertainty if available
+                        if os.path.exists(output_sd_path):
+                            processed[f"{variant_name}_uncertainty"] = np.load(output_sd_path)
+                            print(f"Debug: Loaded uncertainty from {output_sd_path}")
                     else:
                         print(f"Warning: Output file not found at {output_path}")
                         if os.path.exists(variant_output_dir):
