@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 import click
 import numpy as np
 from astropy.io import fits
@@ -283,6 +283,161 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
         except Exception as e:
             echo_colored(f"Report error: {e}", Colors.ERROR)
 
+
+def _build_process_config(
+    config_path: Optional[str],
+    cli_args: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Load process configuration and merge explicit CLI overrides."""
+    config_data: Dict[str, Any] = {}
+    if config_path:
+        config_data = ConfigManager.load_config(Path(config_path))
+    return ConfigManager.merge_with_cli_args(config_data, 'process', cli_args)
+
+
+def _normalize_processing_method(raw_method: Optional[str]) -> Optional[str]:
+    """Normalize optional processing method name."""
+    if not raw_method:
+        return None
+    return str(raw_method).lower().strip()
+
+
+def _build_inla_config(process_config: Dict[str, Any]) -> INLAConfig:
+    """Create INLA configuration from merged process config."""
+    return INLAConfig(
+        shape=process_config.get('shape', 'none'),
+        scaling=process_config.get('scaling', 'log'),
+        nonstationary=process_config.get('nonstationary', False),
+        mesh_cutoff=process_config.get('mesh_cutoff', None),
+        mesh_resolution=process_config.get('mesh_resolution', 30),
+        max_edge_factor=process_config.get('max_edge_factor', 10.0),
+        outer_edge_factor=process_config.get('outer_edge_factor', 1.5),
+        offset_inner_factor=process_config.get('offset_inner_factor', 0.5),
+        offset_outer_factor=process_config.get('offset_outer_factor', 2.0),
+        alpha=process_config.get('alpha', 2),
+        prior_range_prob=process_config.get('prior_range_prob', 0.2),
+        prior_range_lower=process_config.get('prior_range_lower', 2.0),
+        prior_sigma_prob=process_config.get('prior_sigma_prob', 0.2),
+        prior_sigma_upper=process_config.get('prior_sigma_upper', 2.0),
+        num_threads=process_config.get('num_threads', 6),
+        openmp_strategy=process_config.get('openmp_strategy', 'huge'),
+        nbasis=process_config.get('nbasis', 2),
+        spline_degree=process_config.get('spline_degree', 10),
+        tolerance=process_config.get('tolerance', 1e-4),
+        restart=process_config.get('restart', 0)
+    )
+
+
+def _resolve_base_output_dir(process_config: Dict[str, Any]) -> Optional[Path]:
+    """Create and return configured base output directory when present."""
+    output_dir_value = process_config.get('output_dir')
+    if not output_dir_value:
+        return None
+    base_output_dir = Path(output_dir_value)
+    base_output_dir.mkdir(parents=True, exist_ok=True)
+    return base_output_dir
+
+
+def _echo_process_settings(
+    processing_method: Optional[str],
+    preprocessing_method: str,
+    inla_cfg: INLAConfig,
+    final_base_output_dir: Optional[Path],
+) -> None:
+    """Print merged process settings for observability."""
+    echo_colored(
+        f"Method: {processing_method if processing_method else 'preprocess-only (no processing method)'}",
+        Colors.INFO,
+    )
+    echo_colored(f"3D preprocess: {preprocessing_method}", Colors.INFO)
+    echo_colored(f"INLA shape: {inla_cfg.shape}", Colors.INFO)
+    echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
+    if final_base_output_dir:
+        echo_colored(f"Output directory: {final_base_output_dir}", Colors.INFO)
+    else:
+        echo_colored("Output directory: Each file's original directory", Colors.INFO)
+    echo_colored(
+        "Per-file folder pattern: {original-name}_{method-or-preprocess}",
+        Colors.INFO,
+    )
+
+
+def _resolve_file_output_dir(
+    file_path: Path,
+    processing_method: Optional[str],
+    preprocessing_method: str,
+    final_base_output_dir: Optional[Path],
+) -> Path:
+    """Resolve output directory for a single input file."""
+    basename = file_path.stem
+    output_folder_name = (
+        f"{basename}_{processing_method}"
+        if processing_method
+        else f"{basename}_{preprocessing_method}"
+    )
+    if final_base_output_dir:
+        file_output_dir = final_base_output_dir / output_folder_name
+    else:
+        file_output_dir = file_path.parent / output_folder_name
+    file_output_dir.mkdir(parents=True, exist_ok=True)
+    return file_output_dir
+
+
+def _process_single_file(
+    file_path: Path,
+    processing_method: Optional[str],
+    preprocessing_method: str,
+    inla_cfg: INLAConfig,
+    final_base_output_dir: Optional[Path],
+    file_handler: FileHandler,
+) -> str:
+    """Process one FITS file and return success message."""
+    with fits.open(file_path) as hdul:
+        data = hdul[0].data.astype(np.float32)
+        header = hdul[0].header
+
+    if data.ndim not in (2, 3):
+        raise ValueError(f"Input data must be 2D or 3D, got {data.ndim}D.")
+
+    current_file_output_dir = _resolve_file_output_dir(
+        file_path=file_path,
+        processing_method=processing_method,
+        preprocessing_method=preprocessing_method,
+        final_base_output_dir=final_base_output_dir,
+    )
+
+    if processing_method is None and data.ndim != 3:
+        raise ValueError(
+            "No processing method selected. Preprocess-only mode is supported for 3D inputs only."
+        )
+
+    method_result = run_preprocessed_processing(
+        preprocess=preprocessing_method,
+        method=processing_method,
+        data=data,
+        output_dir=current_file_output_dir,
+        inla_config=inla_cfg,
+        header=header,
+    )
+
+    # Keep a copy of the input FITS alongside original variant NPY output.
+    original_variant_dir = current_file_output_dir / "original"
+    original_variant_dir.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(file_path, original_variant_dir / file_path.name)
+
+    restored = method_result.get('restored')
+    uncertainty = method_result.get('uncertainty')
+
+    if restored is None:
+        return "Preprocessing complete (no processing method selected)"
+
+    results_to_save = {'processed': restored}
+    if uncertainty is not None:
+        results_to_save['uncertainty'] = uncertainty
+    file_handler.save_outputs(current_file_output_dir, results_to_save, {}, header)
+    return "Success"
+
+
 @cli.command()
 @click.argument('files', nargs=-1, required=True, callback=validate_fits_files)
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
@@ -333,11 +488,6 @@ def process(ctx, files, config, method, preprocess, shape, scaling, nonstationar
     
     echo_colored(f"Processing {len(validated_files)} files", Colors.INFO)
     
-    # Load config if provided
-    config_data = {}
-    if config:
-        config_data = ConfigManager.load_config(Path(config))
-    
     # Merge CLI args with config
     cli_args = {
         'method': method,
@@ -364,10 +514,8 @@ def process(ctx, files, config, method, preprocess, shape, scaling, nonstationar
         'restart': restart,
         'output_dir': str(output_dir) if output_dir else None
     }
-    
-    process_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args)
-    raw_processing_method = process_config.get('method', None)
-    processing_method = str(raw_processing_method).lower().strip() if raw_processing_method else None
+    process_config = _build_process_config(config, cli_args)
+    processing_method = _normalize_processing_method(process_config.get('method', None))
     preprocessing_method = str(process_config.get('preprocess', 'split2d')).lower()
 
     # Validate selected method early (non-INLA placeholders fail fast).
@@ -387,55 +535,14 @@ def process(ctx, files, config, method, preprocess, shape, scaling, nonstationar
         except ImportError:
             pass
     
-    # Create INLA configuration
-    inla_cfg = INLAConfig(
-        shape=process_config.get('shape', 'none'),
-        scaling=process_config.get('scaling', 'log'),
-        nonstationary=process_config.get('nonstationary', False),
-        mesh_cutoff=process_config.get('mesh_cutoff', None),
-        mesh_resolution=process_config.get('mesh_resolution', 30),
-        max_edge_factor=process_config.get('max_edge_factor', 10.0),
-        outer_edge_factor=process_config.get('outer_edge_factor', 1.5),
-        offset_inner_factor=process_config.get('offset_inner_factor', 0.5),
-        offset_outer_factor=process_config.get('offset_outer_factor', 2.0),
-        alpha=process_config.get('alpha', 2),
-        prior_range_prob=process_config.get('prior_range_prob', 0.2),
-        prior_range_lower=process_config.get('prior_range_lower', 2.0),
-        prior_sigma_prob=process_config.get('prior_sigma_prob', 0.2),
-        prior_sigma_upper=process_config.get('prior_sigma_upper', 2.0),
-        num_threads=process_config.get('num_threads', 6),
-        openmp_strategy=process_config.get('openmp_strategy', 'huge'),
-        nbasis=process_config.get('nbasis', 2),
-        spline_degree=process_config.get('spline_degree', 10),
-        tolerance=process_config.get('tolerance', 1e-4),
-        restart=process_config.get('restart', 0)
+    inla_cfg = _build_inla_config(process_config)
+    final_base_output_dir = _resolve_base_output_dir(process_config)
+    _echo_process_settings(
+        processing_method=processing_method,
+        preprocessing_method=preprocessing_method,
+        inla_cfg=inla_cfg,
+        final_base_output_dir=final_base_output_dir,
     )
-    
-    final_base_output_dir: Optional[Path] = None
-    if process_config.get('output_dir'):
-        final_base_output_dir = Path(process_config['output_dir'])
-        final_base_output_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Display configuration
-    echo_colored(
-        f"Method: {processing_method if processing_method else 'preprocess-only (no processing method)'}",
-        Colors.INFO,
-    )
-    echo_colored(f"3D preprocess: {preprocessing_method}", Colors.INFO)
-    echo_colored(f"INLA shape: {inla_cfg.shape}", Colors.INFO)
-    echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
-    if final_base_output_dir:
-        echo_colored(f"Output directory: {final_base_output_dir}", Colors.INFO)
-        echo_colored(
-            "Per-file folder pattern: {original-name}_{method-or-preprocess}",
-            Colors.INFO,
-        )
-    else:
-        echo_colored("Output directory: Each file's original directory", Colors.INFO)
-        echo_colored(
-            "Per-file folder pattern: {original-name}_{method-or-preprocess}",
-            Colors.INFO,
-        )
     
     # Initialize file handler
     file_handler = FileHandler()
@@ -444,67 +551,15 @@ def process(ctx, files, config, method, preprocess, shape, scaling, nonstationar
     with click.progressbar(validated_files, label='Processing') as bar:
         for file_path in bar:
             try:
-                with fits.open(file_path) as hdul:
-                    data = hdul[0].data.astype(np.float32)
-                    header = hdul[0].header
-
-                if data.ndim not in (2, 3):
-                    raise ValueError(
-                        f"Input data must be 2D or 3D, got {data.ndim}D."
-                    )
-                
-                basename = file_path.stem
-                
-                current_file_output_dir: Path
-                output_folder_name = (
-                    f"{basename}_{processing_method}"
-                    if processing_method
-                    else f"{basename}_{preprocessing_method}"
+                status = _process_single_file(
+                    file_path=file_path,
+                    processing_method=processing_method,
+                    preprocessing_method=preprocessing_method,
+                    inla_cfg=inla_cfg,
+                    final_base_output_dir=final_base_output_dir,
+                    file_handler=file_handler,
                 )
-                if final_base_output_dir:
-                    current_file_output_dir = final_base_output_dir / output_folder_name
-                else:
-                    current_file_output_dir = file_path.parent / output_folder_name
-                
-                current_file_output_dir.mkdir(parents=True, exist_ok=True)
-
-                if processing_method is None and data.ndim != 3:
-                    raise ValueError(
-                        "No processing method selected. Preprocess-only mode is supported for 3D inputs only."
-                    )
-                
-                method_result = run_preprocessed_processing(
-                    preprocess=preprocessing_method,
-                    method=processing_method,
-                    data=data,
-                    output_dir=current_file_output_dir,
-                    inla_config=inla_cfg,
-                    header=header,
-                )
-
-                # Keep a copy of the input FITS alongside original variant NPY output.
-                original_variant_dir = current_file_output_dir / "original"
-                original_variant_dir.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(file_path, original_variant_dir / file_path.name)
-
-                restored = method_result.get('restored')
-                uncertainty = method_result.get('uncertainty')
-                
-                if restored is not None:
-                    # Save results as FITS
-                    results_to_save = {'processed': restored}
-                    
-                    if uncertainty is not None:
-                        results_to_save['uncertainty'] = uncertainty
-                        
-                    file_handler.save_outputs(current_file_output_dir, results_to_save, {}, header)
-                    
-                    echo_colored(f"✓ {file_path.name}: Success", Colors.SUCCESS)
-                else:
-                    echo_colored(
-                        f"✓ {file_path.name}: Preprocessing complete (no processing method selected)",
-                        Colors.SUCCESS,
-                    )
+                echo_colored(f"✓ {file_path.name}: {status}", Colors.SUCCESS)
             except Exception as e:
                 echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
                 
