@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 import click
 import numpy as np
+from astropy.io import fits
 from colorama import Fore, Style, init
 init(autoreset=True)
 
@@ -25,7 +26,10 @@ try:
     from fyf.core.processing.methods import (
         ensure_method_available,
         get_supported_methods,
-        run_processing_method,
+    )
+    from fyf.core.processing.preprocessing import (
+        get_supported_preprocessors,
+        run_preprocessed_processing,
     )
     from fyf.core.data.file_handler import FileHandler
     from fyf.core.validation import validate_images
@@ -67,25 +71,64 @@ def validate_fits_files(ctx, param, value):
     
     import glob
     files = []
+
+    def _iter_candidates(raw_pattern: str):
+        raw_path = Path(raw_pattern)
+        if raw_path.is_absolute():
+            return [raw_path]
+        return [raw_path, Path('/data') / raw_path, Path('/app') / raw_path]
+
     for pattern in value:
-        if Path(pattern).is_dir():
-            # Directory: find all FITS files
-            files.extend(Path(pattern).glob("*.fits"))
-            files.extend(Path(pattern).glob("*.fit"))
-        else:
-            # Pattern: expand wildcards
-            matches = glob.glob(pattern)
-            if matches:
-                files.extend([Path(f) for f in matches if f.endswith(('.fits', '.fit'))])
-            elif pattern.endswith(('.fits', '.fit')):
-                files.append(Path(pattern))
+        found_for_pattern = False
+        for candidate_path in _iter_candidates(pattern):
+            candidate = str(candidate_path)
+
+            if candidate_path.is_dir():
+                dir_matches = sorted(candidate_path.glob("*.fits")) + sorted(candidate_path.glob("*.fit"))
+                if dir_matches:
+                    files.extend(dir_matches)
+                    found_for_pattern = True
+                    break
+
+            if glob.has_magic(candidate):
+                matches = sorted(
+                    Path(m)
+                    for m in glob.glob(candidate)
+                    if m.endswith(('.fits', '.fit'))
+                )
+                if matches:
+                    files.extend(matches)
+                    found_for_pattern = True
+                    break
+
+            if candidate_path.suffix.lower() in {'.fits', '.fit'} and candidate_path.exists():
+                files.append(candidate_path)
+                found_for_pattern = True
+                break
+
+        if not found_for_pattern and pattern.lower().endswith(('.fits', '.fit')):
+            click.echo(f"Warning: Skipping invalid file: {pattern}", err=True)
     
-    # Filter existing files
-    existing = [f for f in files if f.exists()]
+    # Filter existing files and deduplicate by underlying inode when possible.
+    existing = []
+    seen_keys = set()
+    for f in files:
+        if not f.exists():
+            continue
+        try:
+            st = f.stat()
+            key = (st.st_dev, st.st_ino, st.st_size)
+        except OSError:
+            key = ("path", str(f.resolve()))
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        existing.append(f)
+
     if not existing and value:
         raise click.BadParameter("No valid FITS files found")
     
-    return sorted(set(existing))
+    return sorted(existing)
 
 # Main CLI group
 @click.group()
@@ -241,14 +284,20 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
             echo_colored(f"Report error: {e}", Colors.ERROR)
 
 @cli.command()
-@click.argument('files', nargs=-1, required=True)  # Remove the callback
+@click.argument('files', nargs=-1, required=True, callback=validate_fits_files)
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
 @click.option(
     '--method',
     type=click.Choice(get_supported_methods(), case_sensitive=False),
-    default='inla',
+    default=None,
+    help='Processing backend: inla, mcmc, or convolution. Omit to run preprocess-only for 3D FITS.',
+)
+@click.option(
+    '--preprocess',
+    type=click.Choice(get_supported_preprocessors(), case_sensitive=False),
+    default='split2d',
     show_default=True,
-    help='Processing backend: inla, mcmc, or convolution',
+    help='3D preprocessing strategy: split2d, pca, or svd',
 )
 @click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
 @click.option('--scaling', '-s', type=click.Choice(['log', 'none']), help='Enable log10 scaling')
@@ -272,26 +321,15 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.option('--tolerance', type=float, help='INLA convergence tolerance')
 @click.option('--restart', type=int, help='Number of INLA restarts')
 @click.pass_context
-def process(ctx, files, config, method, shape, scaling, nonstationary, output_dir,
+def process(ctx, files, config, method, preprocess, shape, scaling, nonstationary, output_dir,
             mesh_cutoff, mesh_resolution, max_edge_factor, outer_edge_factor,
             offset_inner_factor, offset_outer_factor, alpha, prior_range_prob,
             prior_range_lower, prior_sigma_prob, prior_sigma_upper, num_threads,
             openmp_strategy, nbasis, spline_degree, tolerance, restart):
     """Process FITS images to fill missing data"""
     echo_banner("FYF Processing")
-    
-    # Manual validation of files
-    validated_files = []
-    for file_pattern in files:
-        file_path = Path(file_pattern)
-        if file_path.exists() and file_path.suffix.lower() in ['.fits', '.fit']:
-            validated_files.append(file_path)
-        else:
-            echo_colored(f"Warning: Skipping invalid file: {file_path}", Colors.WARNING)
-    
-    if not validated_files:
-        echo_colored("Error: No valid FITS files found", Colors.ERROR)
-        return
+
+    validated_files = files
     
     echo_colored(f"Processing {len(validated_files)} files", Colors.INFO)
     
@@ -303,6 +341,7 @@ def process(ctx, files, config, method, shape, scaling, nonstationary, output_di
     # Merge CLI args with config
     cli_args = {
         'method': method,
+        'preprocess': preprocess,
         'shape': shape,
         'scaling': scaling,
         'nonstationary': nonstationary,
@@ -327,14 +366,17 @@ def process(ctx, files, config, method, shape, scaling, nonstationary, output_di
     }
     
     process_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args)
-    processing_method = str(process_config.get('method', 'inla')).lower()
+    raw_processing_method = process_config.get('method', None)
+    processing_method = str(raw_processing_method).lower().strip() if raw_processing_method else None
+    preprocessing_method = str(process_config.get('preprocess', 'split2d')).lower()
 
     # Validate selected method early (non-INLA placeholders fail fast).
-    try:
-        ensure_method_available(processing_method)
-    except (ValueError, NotImplementedError) as e:
-        echo_colored(f"Error: {e}", Colors.ERROR)
-        return
+    if processing_method:
+        try:
+            ensure_method_available(processing_method)
+        except (ValueError, NotImplementedError) as e:
+            echo_colored(f"Error: {e}", Colors.ERROR)
+            return
 
     # Check R-INLA availability only when INLA backend is selected.
     if processing_method == 'inla':
@@ -375,15 +417,25 @@ def process(ctx, files, config, method, shape, scaling, nonstationary, output_di
         final_base_output_dir.mkdir(parents=True, exist_ok=True)
     
     # Display configuration
-    echo_colored(f"Method: {processing_method}", Colors.INFO)
+    echo_colored(
+        f"Method: {processing_method if processing_method else 'preprocess-only (no processing method)'}",
+        Colors.INFO,
+    )
+    echo_colored(f"3D preprocess: {preprocessing_method}", Colors.INFO)
     echo_colored(f"INLA shape: {inla_cfg.shape}", Colors.INFO)
     echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
     if final_base_output_dir:
         echo_colored(f"Output directory: {final_base_output_dir}", Colors.INFO)
-        echo_colored("Per-file folder pattern: {original-name}_{method}", Colors.INFO)
+        echo_colored(
+            "Per-file folder pattern: {original-name}_{method-or-preprocess}",
+            Colors.INFO,
+        )
     else:
         echo_colored("Output directory: Each file's original directory", Colors.INFO)
-        echo_colored("Per-file folder pattern: {original-name}_{method}", Colors.INFO)
+        echo_colored(
+            "Per-file folder pattern: {original-name}_{method-or-preprocess}",
+            Colors.INFO,
+        )
     
     # Initialize file handler
     file_handler = FileHandler()
@@ -392,24 +444,42 @@ def process(ctx, files, config, method, shape, scaling, nonstationary, output_di
     with click.progressbar(validated_files, label='Processing') as bar:
         for file_path in bar:
             try:
-                data, header = file_handler.load_fits(file_path)
+                with fits.open(file_path) as hdul:
+                    data = hdul[0].data.astype(np.float32)
+                    header = hdul[0].header
+
+                if data.ndim not in (2, 3):
+                    raise ValueError(
+                        f"Input data must be 2D or 3D, got {data.ndim}D."
+                    )
                 
                 basename = file_path.stem
                 
                 current_file_output_dir: Path
-                output_folder_name = f"{basename}_{processing_method}"
+                output_folder_name = (
+                    f"{basename}_{processing_method}"
+                    if processing_method
+                    else f"{basename}_{preprocessing_method}"
+                )
                 if final_base_output_dir:
                     current_file_output_dir = final_base_output_dir / output_folder_name
                 else:
                     current_file_output_dir = file_path.parent / output_folder_name
                 
                 current_file_output_dir.mkdir(parents=True, exist_ok=True)
+
+                if processing_method is None and data.ndim != 3:
+                    raise ValueError(
+                        "No processing method selected. Preprocess-only mode is supported for 3D inputs only."
+                    )
                 
-                method_result = run_processing_method(
+                method_result = run_preprocessed_processing(
+                    preprocess=preprocessing_method,
                     method=processing_method,
                     data=data,
                     output_dir=current_file_output_dir,
                     inla_config=inla_cfg,
+                    header=header,
                 )
 
                 # Keep a copy of the input FITS alongside original variant NPY output.
@@ -431,7 +501,10 @@ def process(ctx, files, config, method, shape, scaling, nonstationary, output_di
                     
                     echo_colored(f"✓ {file_path.name}: Success", Colors.SUCCESS)
                 else:
-                    echo_colored(f"✗ {file_path.name}: Failed", Colors.ERROR)
+                    echo_colored(
+                        f"✓ {file_path.name}: Preprocessing complete (no processing method selected)",
+                        Colors.SUCCESS,
+                    )
             except Exception as e:
                 echo_colored(f"✗ {file_path.name}: {e}", Colors.ERROR)
                 

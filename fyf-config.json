@@ -12,6 +12,7 @@
   },
   "process": {
     "method": "convolution",
+    "preprocess": "split2d",
     "shape": "none",
     "mesh_cutoff": null,
     "tolerance": 0.0001,

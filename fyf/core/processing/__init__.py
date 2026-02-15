@@ -14,6 +14,10 @@ from fyf.core.processing.methods import (
     get_supported_methods,
     run_processing_method,
 )
+from fyf.core.processing.preprocessing import (
+    get_supported_preprocessors,
+    run_preprocessed_processing,
+)
 
 __all__ = [
     "FitsProcessor",
@@ -21,4 +25,6 @@ __all__ = [
     "ensure_method_available",
     "get_supported_methods",
     "run_processing_method",
+    "get_supported_preprocessors",
+    "run_preprocessed_processing",
 ]

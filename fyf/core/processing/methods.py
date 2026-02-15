@@ -7,6 +7,7 @@ changing call sites.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
@@ -23,9 +24,17 @@ def _run_inla(
     inla_config: Optional[INLAConfig] = None,
 ) -> Dict[str, object]:
     """Run the existing INLA pipeline and return normalized output keys."""
+    effective_config = inla_config or INLAConfig()
+    if effective_config.scaling == "log" and np.any(np.asarray(data) <= 0):
+        print(
+            "Warning: Non-positive values detected; switching INLA scaling "
+            "from 'log' to 'none' for this input."
+        )
+        effective_config = replace(effective_config, scaling="none")
+
     processor = FitsProcessor(CosmicConfig(fraction=0.0), SatelliteConfig(num_trails=0, trail_width=1))
     variants = {"original": data}
-    processed = processor.process_variants(variants, inla_config, str(output_dir))
+    processed = processor.process_variants(variants, effective_config, str(output_dir))
 
     return {
         "restored": processed.get("original"),

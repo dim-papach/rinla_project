@@ -32,6 +32,7 @@ class ConfigManager:
             },
             "process": {
                 "method": "inla",  # inla, mcmc, or convolution
+                "preprocess": "split2d",  # split2d, pca, or svd (for 3D FITS)
                 # Basic INLA parameters
                 "shape": "none",
                 "mesh_cutoff": None,
