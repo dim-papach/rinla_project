@@ -9,8 +9,16 @@ This subpackage provides tools for processing data in the FYF package:
 
 from fyf.core.processing.fits_processor import FitsProcessor
 from fyf.core.processing.hash_manager import ArrayHashManager
+from fyf.core.processing.methods import (
+    ensure_method_available,
+    get_supported_methods,
+    run_processing_method,
+)
 
 __all__ = [
     "FitsProcessor",
     "ArrayHashManager",
+    "ensure_method_available",
+    "get_supported_methods",
+    "run_processing_method",
 ]

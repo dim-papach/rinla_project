@@ -22,9 +22,6 @@ from fyf.core.paths import (
     get_inla_script_path, get_output_dir
 )
 
-
-print("Debug: fits_processor.py module loaded")
-
 class FitsProcessor:
     """
     FitsProcessor handles the creation, processing, saving, and deletion of image variants
@@ -45,10 +42,8 @@ class FitsProcessor:
             cosmic_cfg: Configuration for cosmic ray generation
             satellite_cfg: Configuration for satellite trail generation
         """
-        print("Debug: Initializing FitsProcessor")
         self.cosmic_cfg = cosmic_cfg
         self.satellite_cfg = satellite_cfg
-        print("Debug: FitsProcessor initialized with configs")
 
     def create_variants(self, 
                        data: np.ndarray, 

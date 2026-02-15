@@ -10,6 +10,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
+from typing import Optional
 import click
 import numpy as np
 from colorama import Fore, Style, init
@@ -20,6 +21,11 @@ try:
     from fyf.config import CosmicConfig, SatelliteConfig, INLAConfig, PlotConfig
     from fyf.core.data.masking import MaskGenerator
     from fyf.core.processing.fits_processor import FitsProcessor
+    from fyf.core.processing.methods import (
+        ensure_method_available,
+        get_supported_methods,
+        run_processing_method,
+    )
     from fyf.core.data.file_handler import FileHandler
     from fyf.core.validation import validate_images
     from fyf.visualization.plotting import PlotGenerator
@@ -86,7 +92,7 @@ def validate_fits_files(ctx, param, value):
 @click.option('--verbose', '-v', is_flag=True, help='Enable verbose output')
 @click.pass_context
 def cli(ctx, verbose):
-    """FYF - Fill Your FITS: Process astronomical images using R-INLA"""
+    """FYF - Fill Your FITS: Process astronomical images"""
     ctx.ensure_object(dict)
     ctx.obj['verbose'] = verbose
     
@@ -236,6 +242,13 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @cli.command()
 @click.argument('files', nargs=-1, required=True)  # Remove the callback
 @click.option('--config', type=click.Path(exists=True), help='Configuration file')
+@click.option(
+    '--method',
+    type=click.Choice(get_supported_methods(), case_sensitive=False),
+    default='inla',
+    show_default=True,
+    help='Processing backend: inla, mcmc, or convolution',
+)
 @click.option('--shape', type=click.Choice(['none', 'radius', 'ellipse']), help='Shape parameter')
 @click.option('--scaling', '-s', type=click.Choice(['log', 'none']), help='Enable log10 scaling')
 @click.option('--nonstationary', is_flag=True, help='Enable non-stationary model')
@@ -258,12 +271,12 @@ def simulate(ctx, files, config, cosmic_fraction, trails, output_dir, report, cu
 @click.option('--tolerance', type=float, help='INLA convergence tolerance')
 @click.option('--restart', type=int, help='Number of INLA restarts')
 @click.pass_context
-def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
+def process(ctx, files, config, method, shape, scaling, nonstationary, output_dir,
             mesh_cutoff, mesh_resolution, max_edge_factor, outer_edge_factor,
             offset_inner_factor, offset_outer_factor, alpha, prior_range_prob,
             prior_range_lower, prior_sigma_prob, prior_sigma_upper, num_threads,
             openmp_strategy, nbasis, spline_degree, tolerance, restart):
-    """Process FITS images with INLA to fill missing data"""
+    """Process FITS images to fill missing data"""
     echo_banner("FYF Processing")
     
     # Manual validation of files
@@ -281,14 +294,6 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
     
     echo_colored(f"Processing {len(validated_files)} files", Colors.INFO)
     
-    # Check R-INLA availability
-    try:
-        from fyf.r import check_inla_installed
-        if not check_inla_installed():
-            echo_colored("Warning: R-INLA not detected", Colors.WARNING)
-    except ImportError:
-        pass
-    
     # Load config if provided
     config_data = {}
     if config:
@@ -296,6 +301,7 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
     
     # Merge CLI args with config
     cli_args = {
+        'method': method,
         'shape': shape,
         'scaling': scaling,
         'nonstationary': nonstationary,
@@ -320,6 +326,23 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
     }
     
     process_config = ConfigManager.merge_with_cli_args(config_data, 'process', cli_args)
+    processing_method = str(process_config.get('method', 'inla')).lower()
+
+    # Validate selected method early (non-INLA placeholders fail fast).
+    try:
+        ensure_method_available(processing_method)
+    except (ValueError, NotImplementedError) as e:
+        echo_colored(f"Error: {e}", Colors.ERROR)
+        return
+
+    # Check R-INLA availability only when INLA backend is selected.
+    if processing_method == 'inla':
+        try:
+            from fyf.r import check_inla_installed
+            if not check_inla_installed():
+                echo_colored("Warning: R-INLA not detected", Colors.WARNING)
+        except ImportError:
+            pass
     
     # Create INLA configuration
     inla_cfg = INLAConfig(
@@ -351,42 +374,51 @@ def process(ctx, files, config, shape, scaling, nonstationary, output_dir,
         final_base_output_dir.mkdir(parents=True, exist_ok=True)
     
     # Display configuration
+    echo_colored(f"Method: {processing_method}", Colors.INFO)
     echo_colored(f"INLA shape: {inla_cfg.shape}", Colors.INFO)
     echo_colored(f"Scaling: {'Enabled' if inla_cfg.scaling else 'Disabled'}", Colors.INFO)
     if final_base_output_dir:
         echo_colored(f"Output directory: {final_base_output_dir}", Colors.INFO)
+        echo_colored("Per-file folder pattern: {original-name}_{method}", Colors.INFO)
     else:
-        echo_colored(f"Output directory: Each file's original directory", Colors.INFO)
+        echo_colored("Output directory: Each file's original directory", Colors.INFO)
+        echo_colored("Per-file folder pattern: {original-name}_{method}", Colors.INFO)
     
-    # Initialize file handler and processor
+    # Initialize file handler
     file_handler = FileHandler()
-    processor = FitsProcessor(CosmicConfig(fraction=0.0), SatelliteConfig(num_trails=0, trail_width=1))
 
-    # Process files using FitsProcessor
+    # Process files using selected backend
     with click.progressbar(validated_files, label='Processing') as bar:
         for file_path in bar:
             try:
                 data, header = file_handler.load_fits(file_path)
-                variants = {'original': data}
                 
                 basename = file_path.stem
                 
                 current_file_output_dir: Path
+                output_folder_name = f"{basename}_{processing_method}"
                 if final_base_output_dir:
-                    current_file_output_dir = final_base_output_dir / basename
+                    current_file_output_dir = final_base_output_dir / output_folder_name
                 else:
-                    current_file_output_dir = file_path.parent
+                    current_file_output_dir = file_path.parent / output_folder_name
                 
                 current_file_output_dir.mkdir(parents=True, exist_ok=True)
                 
-                processed = processor.process_variants(variants, inla_cfg, str(current_file_output_dir))
+                method_result = run_processing_method(
+                    method=processing_method,
+                    data=data,
+                    output_dir=current_file_output_dir,
+                    inla_config=inla_cfg,
+                )
+                restored = method_result.get('restored')
+                uncertainty = method_result.get('uncertainty')
                 
-                if processed.get('original') is not None:
+                if restored is not None:
                     # Save results as FITS
-                    results_to_save = {'processed': processed['original']}
+                    results_to_save = {'processed': restored}
                     
-                    if processed.get('original_uncertainty') is not None:
-                        results_to_save['uncertainty'] = processed['original_uncertainty']
+                    if uncertainty is not None:
+                        results_to_save['uncertainty'] = uncertainty
                         
                     file_handler.save_outputs(current_file_output_dir, results_to_save, {}, header)
                     

@@ -1,47 +1,51 @@
-> can i add new methods other than inla in my cli?
+# Multi-Method Processing Refactor (Implemented)
 
-✦ Yes, absolutely. Currently, your CLI is tightly coupled to
-  the INLA method, but we can refactor it to support multiple
-  algorithms (e.g., mean, median, scikit-image inpainting, or
-  other statistical methods) using a Strategy Pattern.
+This project now includes a minimal method-dispatch architecture so processing is no longer hardcoded to INLA in the CLI.
 
-  Here is the high-level plan to achieve this:
+## What Was Changed
 
-   1. Create a Processor Interface: Define an abstract base
-      class (e.g., ImageRestorer) that all methods must
-      implement. This ensures every method has a consistent
-      .process() function.
-   2. Refactor INLA Logic: Move the current INLA-specific code
-      from FitsProcessor into a dedicated INLAProcessor class.
-   3. Add New Methods: Implement other classes like
-      MeanProcessor or MedianProcessor that implement the
-      interface.
-   4. Update CLI: Add a --method argument to the process
-      command to let the user select the algorithm.
+1. Added method registry and dispatcher:
+- `fyf/core/processing/methods.py`
+- Canonical methods: `inla`, `mcmc`, `convolution`
+- Alias support: `conv -> convolution`
+- Unified dispatch entrypoint: `run_processing_method(...)`
 
-  Proposed Architecture
+2. Updated CLI process command:
+- File: `fyf/cli.py`
+- New option: `--method [inla|mcmc|convolution]` (default: `inla`)
+- Process flow now dispatches via method registry instead of directly calling INLA logic in the command body.
+- INLA installation checks run only when `--method inla` is selected.
 
-  `fyf/core/processing/base.py`
+3. Preserved INLA behavior through dispatch:
+- INLA runner uses existing `FitsProcessor.process_variants(...)`
+- Return is normalized to:
+  - `restored`
+  - `uncertainty` (optional)
+  - `meta`
 
-   1 from abc import ABC, abstractmethod
-   2 import numpy as np
-   3 
-   4 class BaseProcessor(ABC):
-   5     @abstractmethod
-   6     def process(self, data: np.ndarray, mask: np.ndarray,
-     config: dict) -> np.ndarray:
-   7         pass
+4. Exported method utilities from processing package:
+- File: `fyf/core/processing/__init__.py`
+- Exports:
+  - `ensure_method_available`
+  - `get_supported_methods`
+  - `run_processing_method`
 
-  `fyf/core/processing/simple.py`
+## Current Method Status
 
-   1 class MeanProcessor(BaseProcessor):
-   2     def process(self, data: np.ndarray, mask: np.ndarray,
-     config: dict) -> np.ndarray:
-   3         # Simple implementation: fill masked areas with 
-     local mean
-   4         return filled_data
+- `inla`: Implemented and active.
+- `mcmc`: Recognized but not implemented yet.
+- `convolution`: Recognized but not implemented yet.
 
-  Would you like me to refactor the code to support this
-  "plug-and-play" architecture now? This would allow you to
-  easily add new methods in the future.
+For unimplemented methods, the CLI fails fast with a clear error message.
 
+## Why This Is Simpler
+
+This uses a lightweight registry instead of a full abstract class hierarchy. It gives immediate extensibility with minimal disruption:
+
+- No broad rewrite of `FitsProcessor` required.
+- Existing INLA path remains functional.
+- New methods can be added incrementally by implementing one runner function and registering it.
+
+## Next Step (Recommended)
+
+Implement `convolution` as the first non-INLA backend in `fyf/core/processing/methods.py`, then add method-specific CLI/config options only for that backend.
