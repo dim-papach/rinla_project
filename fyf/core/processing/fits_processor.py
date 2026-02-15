@@ -164,25 +164,16 @@ class FitsProcessor:
                 except Exception as e:
                     print(f"Debug: Error deleting {name}.npy: {e}")
         
-        # Also remove path.txt if it exists
-        path_file = os.path.join(output_dir, "path.txt")
-        if os.path.exists(path_file):
-            try:
-                os.remove(path_file)
-                print(f"Debug: Deleted path.txt from {output_dir}")
-            except Exception as e:
-                print(f"Debug: Error deleting path.txt: {e}")
-        
         print("Masked variants deletion completed.")
 
-    def _build_inla_command(self, inla_script_path: str, inla_config: INLAConfig, path_file: str) -> list:
+    def _build_inla_command(self, inla_script_path: str, inla_config: INLAConfig, input_path: str) -> list:
         """Build R script command with all INLA configuration parameters"""
         cmd = ["Rscript", str(inla_script_path)]
         
         # Get default config for comparison
         default_config = INLAConfig()
         
-        cmd.extend(["--path-file", path_file])
+        cmd.extend(["--input-file", input_path])
         # Iterate through all config attributes
         for attr_name in dir(inla_config):
             if not attr_name.startswith('_'):  # Skip private attributes
@@ -260,13 +251,8 @@ class FitsProcessor:
                 np.save(input_path, data)
                 print(f"Debug: Saved input file to {input_path}")
                 
-                # 2. Save the input path to a text file with absolute path
-                path_file = os.path.join(variants_dir, "path.txt")
-                with open(path_file, "w") as f:
-                    f.write(os.path.abspath(input_path)+"\n")
-                print(f"Debug: Saved path file to {path_file}")
-                
-                cmd = self._build_inla_command(inla_script_path, inla_config or INLAConfig(), path_file)
+                # 2. Build command directly with input path
+                cmd = self._build_inla_command(inla_script_path, inla_config or INLAConfig(), input_path)
                 
                 print(f"Debug: R script command: {' '.join(cmd)}")
 
@@ -317,11 +303,6 @@ class FitsProcessor:
                         if os.path.exists(input_path):
                             print(f"Debug: Cleaning up temporary input file {input_path}")
                             os.remove(input_path)
-                    
-                    if 'path_file' in locals():
-                        if os.path.exists(path_file):
-                            print(f"Debug: Cleaning up temporary path file {path_file}")
-                            os.remove(path_file)
                 except Exception as cleanup_error:
                     print(f"Debug: Error during cleanup: {cleanup_error}")
 

@@ -12,6 +12,8 @@ cat("Debug: Loaded required libraries\n")
 # ========== COMMAND LINE ARGUMENT PARSING ==========
 option_list <- list(
   # Basic parameters
+  make_option("--input-file", type="character", default=NULL,
+              help="Path to input NPY file"),
   make_option("--path-file", type="character", default="/tmp/fyf_variants/path.txt",
             help="Path to the file containing NPY path"),
   make_option("--shape", type="character", default="none", 
@@ -68,7 +70,6 @@ opts <- parse_args(opt_parser)
 
 # Set INLA options based on parsed arguments
 inla.setOption(num.threads = opts$`num-threads`)
-inla.setOption(blas.num.threads = opts$`num-threads`)
 
 # Display configuration
 cat("=== INLA CONFIGURATION ===\n")
@@ -87,20 +88,6 @@ cat("OpenMP strategy:", opts$`openmp-strategy`, "\n")
 # ============================================================================
 # DATA LOADING FUNCTIONS
 # ============================================================================
-
-#' Load the path of the npy file from a txt file, with debug checks
-load_path <- function(file_path) {
-  cat("Debug: Checking if file_path exists:", file_path, "\n")
-  if (!file.exists(file_path)) {
-    stop("Debug: file_path does not exist: ", file_path)
-  }
-  path <- readLines(file_path, n = 1)
-  cat("Debug: Loaded path from file:", path, "\n")
-  if (!file.exists(path)) {
-    stop("Debug: Loaded path does not exist: ", path)
-  }
-  return(path)
-}
 
 #' Load data from NPY file and transpose to correct orientation
 load_npy <- function(file_path) {
@@ -379,7 +366,7 @@ run_inla_model <- function(stk, par, epar, spde) {
 create_projector <- function(mesh, xlim, ylim, zoom, xsize, ysize) {
   cat("=== PROJECTION FUNCTIONS LOADED ===\n")
 
-  inla.mesh.projector(mesh,
+  fmesher::fm_evaluator(mesh,
                       xlim = xlim,
                       ylim = ylim,
                       dims = c(zoom * xsize, zoom * ysize))
@@ -420,12 +407,12 @@ project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize, ysize
   spatial_term <- compute_spatial_term(projector, shape, res, xcenter, ycenter, eigens)
 
   # Project random effects and combine with trend
-  random_effects <- inla.mesh.project(projector, res$summary.random$i$mean)
+  random_effects <- fmesher::fm_evaluate(projector, res$summary.random$i$mean)
   output <- random_effects + 
             t(matrix(spatial_term, nrow = zoom * ysize, ncol = zoom * xsize))
 
   # Project standard deviations
-  outputsd <- inla.mesh.project(projector, res$summary.random$i$sd)
+  outputsd <- fmesher::fm_evaluate(projector, res$summary.random$i$sd)
 
   return(list(
     out = t(output),      # Transpose for correct orientation
@@ -487,16 +474,20 @@ tryCatch({
   cat("=== STARTING INLA PIPELINE ===\n")
   
   # 1. Load input path
-  file_path <- opts$`path-file`
-  cat("Debug: Checking if file_path exists:", file_path, "\n")
-  if (!file.exists(file_path)) {
-    file_path <- commandArgs(trailingOnly = TRUE)[1]
-    if (is.na(file_path) || !file.exists(file_path)) {
-      stop("No valid path provided.")
+  npy_path <- opts$`input-file`
+  
+  # Check if npy_path is provided via option, else check trailing args
+  if (is.null(npy_path)) {
+    args <- commandArgs(trailingOnly = TRUE)
+    if (length(args) > 0 && !startsWith(args[1], "-")) {
+      npy_path <- args[1]
     }
   }
   
-  npy_path <- readLines(file_path, n = 1)
+  if (is.null(npy_path) || !file.exists(npy_path)) {
+    stop("No valid input file provided. Use --input-file or provide path as argument.")
+  }
+  
   cat("Loading data from:", npy_path, "\n")
 
   # 2. Load and prepare data
@@ -574,18 +565,41 @@ tryCatch({
   # 8. Apply inverse scaling and save
   final_results <- unscale_results(projected_results)
   
-  output_dir <- "processed"
+  output_dir <- Sys.getenv("FYF_OUTPUT_DIR", unset = "processed")
   if (!dir.exists(output_dir)) {
     dir.create(output_dir, recursive = TRUE)
   }
   
-  fname <- sub("\\.npy$", "", basename(npy_path))
-  out_path <- file.path(output_dir, fname)
+  # Using fixed output name "out.npy" to match Python expectation or keep original basename?
+  # The Python script expects "out.npy" in the variant-specific folder.
+  # Let's check the Python script logic again. It looks for "out.npy".
+  # "output_path = os.path.join(variant_output_dir, 'out.npy')"
   
-  save_npy(final_results, out_path)
+  # The existing R code preserved the basename. The Python script sets FYF_OUTPUT_DIR to a variant-specific folder.
+  # If we want to be compatible with the Python script, we should probably save as 'out.npy' OR the Python script should look for the basename.
+  # However, the previous code did: fname <- sub("\\.npy$", "", basename(npy_path)); out_path <- file.path(output_dir, fname)
+  # And `save_npy` appends `.npy`. So it saved `processed/<basename>/out.npy` or similar?
+  
+  # Wait, `save_npy` iterates over the list names (out, outsd) and saves them as `name.npy`.
+  # So if final_results has `out` and `outsd`, it saves `output_dir/out.npy` and `output_dir/outsd.npy`.
+  # This matches `save_npy(final_results, out_path)`.
+  # BUT `out_path` passed to `save_npy` acts as the directory path in the original code?
+  # Let's check `save_npy` implementation in the previous read.
+  
+  # save_npy implementation:
+  # save_npy <- function(array_list, dir_path) { ... file_path <- file.path(dir_path, paste0(name, ".npy")) ... }
+  
+  # So `out_path` IS the directory path.
+  # Previous code: out_path <- file.path(output_dir, fname)
+  # If output_dir was "processed", and fname was "cosmic", it created "processed/cosmic" and saved "out.npy" inside it.
+  
+  # The Python script sets FYF_OUTPUT_DIR to the variant specific directory.
+  # So we just need to use that.
+  
+  save_npy(final_results, output_dir)
   
   cat("=== PIPELINE COMPLETED SUCCESSFULLY ===\n")
-  cat("Results saved to:", out_path, "\n")
+  cat("Results saved to:", output_dir, "\n")
 
 }, error = function(e) {
   cat("=== PIPELINE FAILED ===\n")

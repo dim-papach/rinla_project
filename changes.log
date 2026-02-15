@@ -1,0 +1,15 @@
+I have updated the R scripts to address the deprecation warnings from the INLA package. The changes involve migrating from deprecated `inla.mesh.projector()` and `inla.mesh.project()` functions to their `fmesher` equivalents.
+
+**Details of Changes:**
+
+*   **`fyf/r/INLA_pipeline.R`**:
+    *   Replaced calls to `inla.mesh.projector()` with `fmesher::fm_evaluator()`.
+    *   Replaced calls to `inla.mesh.project()` with `fmesher::fm_evaluate()` for both mean and standard deviation projections.
+
+*   **`fyf/r/functions.R`**:
+    *   Replaced calls to `inla.mesh.projector()` with `fmesher::fm_evaluator()`.
+    *   Corrected the `dim` argument to `dims` when calling `fmesher::fm_evaluator()`.
+    *   Replaced all instances of `inla.mesh.project()` with `fmesher::fm_evaluate()` across various projection scenarios (e.g., 'radius', 'ellipse', 'none' shapes, and for standard deviation calculations).
+    *   Updated corresponding documentation comments to reflect the change from `inla.mesh.projector` to `fmesher::fm_evaluator`.
+
+These modifications ensure the code uses the latest, non-deprecated functions, resolving the warnings observed previously.

@@ -391,8 +391,8 @@ project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
                                  ysize, zoom, shape, xcenter, ycenter,
                                  eigens, spde) {
   # Create projector
-  projector <- inla.mesh.projector(mesh, xlim = c(xini, xfin), ylim = c(yini, yfin),
-                                   dim = zoom * c(xsize + 1, ysize + 1))
+  projector <- fmesher::fm_evaluator(mesh, xlim = c(xini, xfin), ylim = c(yini, yfin),
+                                   dims = zoom * c(xsize + 1, ysize + 1))
 
   if (shape == 'radius') {
     # Projection for radius
@@ -402,7 +402,7 @@ project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
     projected_radius_2 <- projected_radius^2
 
     # Output with matrix to include radius function
-    output <- inla.mesh.project(projector, res$summary.random$i$mean) +
+    output <- fmesher::fm_evaluate(projector, res$summary.random$i$mean) +
       t(matrix(as.numeric(res$summary.fixed$mean[1] +
                             res$summary.fixed$mean[2] * projected_radius +
                             res$summary.fixed$mean[3] * projected_radius_2),
@@ -417,7 +417,7 @@ project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
     projected_ellipse_2 <- projected_ellipse^2
 
     # Output with matrix to include ellipse function
-    output <- inla.mesh.project(projector, res$summary.random$i$mean) +
+    output <- fmesher::fm_evaluate(projector, res$summary.random$i$mean) +
       t(matrix(as.numeric(res$summary.fixed$mean[1] +
                             res$summary.fixed$mean[2] * projected_ellipse +
                             res$summary.fixed$mean[3] * projected_ellipse_2),
@@ -425,7 +425,7 @@ project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
 
   } else if (shape == 'none') {
     # Output without additional spatial functions
-    output <- inla.mesh.project(projector, res$summary.random$i$mean) +
+    output <- fmesher::fm_evaluate(projector, res$summary.random$i$mean) +
       t(matrix(as.numeric(res$summary.fixed$mean[1]),
                nrow = zoom * (ysize + 1), ncol = zoom * (xsize + 1)))
   } else {
@@ -433,7 +433,7 @@ project_inla_results <- function(mesh, res, xini, xfin, yini, yfin, xsize,
   }
 
   # Output standard deviation
-  outputsd <- inla.mesh.project(projector, res$summary.random$i$sd)
+  outputsd <- fmesher::fm_evaluate(projector, res$summary.random$i$sd)
 
   return(list(output = output, outputsd = outputsd))
 }
@@ -556,15 +556,15 @@ save_npy <- function(array_list, dir_path) {
 #' @param zoom Numeric: Grid resolution multiplier.
 #' @param xsize Integer: Base grid dimension in x-direction.
 #' @param ysize Integer: Base grid dimension in y-direction.
-#' @return An `inla.mesh.projector` object.
+#' @return An `fmesher::fm_evaluator` object.
 #' @examples
 #' # projector <- create_projector(mesh, c(0, 10), c(0, 10), zoom = 2, 100, 100)
 create_projector <- function(mesh, xlim, ylim, zoom, xsize, ysize) {
-  inla.mesh.projector(
+  fmesher::fm_evaluator(
     mesh,
     xlim = xlim,
     ylim = ylim,
-    dim = zoom * c(xsize, ysize))
+    dims = zoom * c(xsize, ysize))
 }
 
 
@@ -572,7 +572,7 @@ create_projector <- function(mesh, xlim, ylim, zoom, xsize, ysize) {
 #'
 #' Calculates fixed-effects spatial trend (radius/ellipse/none) for projection.
 #'
-#' @param projector An `inla.mesh.projector` object.
+#' @param projector An `fmesher::fm_evaluator` object.
 #' @param shape Character: Spatial trend type ('radius', 'ellipse', or 'none').
 #' @param res INLA model result object.
 #' @param xcenter Numeric: X-coordinate of trend center.
@@ -714,12 +714,12 @@ project_inla_results_collect <- function(mesh, res, xini, xfin, yini, yfin, xsiz
   spatial_term <- compute_spatial_term(projector, shape, res, xcenter, ycenter, eigens)
 
   # 4. Project random effects and combine with trend
-  random_effects <- inla.mesh.project(projector, res$summary.random$i$mean)
+  random_effects <- fmesher::fm_evaluate(projector, res$summary.random$i$mean)
   output <- (random_effects) +
    t(matrix(spatial_term, nrow = zoom * (ysize), ncol = zoom * (xsize)))
 
   # 5. Project standard deviations
-  outputsd <- inla.mesh.project(projector, res$summary.random$i$sd)
+  outputsd <- fmesher::fm_evaluate(projector, res$summary.random$i$sd)
 
   # 6. Process validation data if provided
   validation_data <- if (!is.null(valid)) {
