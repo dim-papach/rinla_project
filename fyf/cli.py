@@ -7,6 +7,7 @@ A command-line tool for processing astronomical FITS images using R-INLA.
 
 import sys
 import os
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -410,6 +411,12 @@ def process(ctx, files, config, method, shape, scaling, nonstationary, output_di
                     output_dir=current_file_output_dir,
                     inla_config=inla_cfg,
                 )
+
+                # Keep a copy of the input FITS alongside original variant NPY output.
+                original_variant_dir = current_file_output_dir / "original"
+                original_variant_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(file_path, original_variant_dir / file_path.name)
+
                 restored = method_result.get('restored')
                 uncertainty = method_result.get('uncertainty')
                 

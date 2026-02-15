@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional
 
 import numpy as np
+from astropy.convolution import Gaussian2DKernel, convolve, interpolate_replace_nans
 
 from fyf.config import CosmicConfig, INLAConfig, SatelliteConfig
 from fyf.core.processing.fits_processor import FitsProcessor
@@ -47,8 +48,65 @@ def _run_convolution(
     output_dir: Path,
     inla_config: Optional[INLAConfig] = None,
 ) -> Dict[str, object]:
-    """Placeholder for a future convolution backend."""
-    raise NotImplementedError("Method 'convolution' is not implemented yet.")
+    """Fill NaNs using astropy convolution interpolation."""
+    if data.ndim != 2:
+        raise ValueError("Convolution backend expects 2D image data.")
+
+    data_float = data.astype(np.float64, copy=True)
+    nan_mask = np.isnan(data_float)
+
+    if not np.any(nan_mask):
+        restored = data_float
+    else:
+        kernel = Gaussian2DKernel(x_stddev=1.0, y_stddev=1.0)
+        restored = interpolate_replace_nans(data_float, kernel)
+
+        # If any NaNs remain (e.g., large disconnected masked regions),
+        # use a smoothed fallback from finite pixels.
+        if np.isnan(restored).any():
+            finite_mask = np.isfinite(data_float).astype(np.float64)
+            weighted_sum = convolve(
+                np.nan_to_num(data_float, nan=0.0),
+                kernel,
+                boundary="extend",
+                nan_treatment="fill",
+                normalize_kernel=False,
+            )
+            weights = convolve(
+                finite_mask,
+                kernel,
+                boundary="extend",
+                nan_treatment="fill",
+                normalize_kernel=False,
+            )
+            fallback = np.divide(
+                weighted_sum,
+                weights,
+                out=np.copy(data_float),
+                where=weights > 0,
+            )
+            restored = np.where(np.isnan(restored), fallback, restored)
+
+    # Lightweight uncertainty proxy: absolute local residual from smoothed field.
+    smoothed = convolve(
+        restored,
+        Gaussian2DKernel(x_stddev=1.5, y_stddev=1.5),
+        boundary="extend",
+        nan_treatment="interpolate",
+    )
+    uncertainty = np.abs(restored - smoothed)
+    uncertainty[~nan_mask] = 0.0
+
+    variant_output_dir = Path(output_dir) / "original"
+    variant_output_dir.mkdir(parents=True, exist_ok=True)
+    np.save(variant_output_dir / "out.npy", restored.astype(np.float32))
+    np.save(variant_output_dir / "outsd.npy", uncertainty.astype(np.float32))
+
+    return {
+        "restored": restored.astype(np.float32),
+        "uncertainty": uncertainty.astype(np.float32),
+        "meta": {"method": "convolution"},
+    }
 
 
 METHOD_REGISTRY: Dict[str, Callable[..., Dict[str, object]]] = {
@@ -80,7 +138,7 @@ def ensure_method_available(method: str) -> None:
         options = ", ".join(get_supported_methods())
         raise ValueError(f"Unknown method '{method}'. Available methods: {options}")
 
-    if canonical != "inla":
+    if canonical in {"mcmc"}:
         raise NotImplementedError(f"Method '{canonical}' is recognized but not implemented yet.")
 
 

@@ -31,6 +31,7 @@ class ConfigManager:
                 "output_dir": "./output"
             },
             "process": {
+                "method": "inla",  # inla, mcmc, or convolution
                 # Basic INLA parameters
                 "shape": "none",
                 "mesh_cutoff": None,
