@@ -37,5 +37,6 @@ To make sure you don&rsquo;t have a dependency problem, follow the instructions
 
 - [Git](./docs/git.md)
 - [Nix](./docs/nix.md)
+- [Docker](./DOCKER_QUICKSTART.md)
 - [Wiki](https://github.com/dim-papach/rinla_project/wiki)
 - [targets](https://books.ropensci.org/targets/)
