@@ -28,6 +28,8 @@ option_list <- list(
               help="Use non-stationary SPDE model [default: %default]"),
               
   # Mesh parameters
+  make_option("--mesh-cutoff", type="double", default=NULL,
+              help="Minimum distance between mesh points [default: %default]"),
   make_option("--mesh-resolution", type="integer", default=30L,
               help="Mesh resolution factor [default: %default]"),
   make_option("--max-edge-factor", type="double", default=10.0,
@@ -60,7 +62,7 @@ option_list <- list(
   # Non-stationary parameters
   make_option("--nbasis", type="integer", default=2L,
               help="Number of basis functions for non-stationary model [default: %default]"),
-  make_option("--spline-degree", type="integer", default=2L,
+  make_option("--spline-degree", type="integer", default=3L,
               help="Degree of B-spline basis functions [default: %default]")
 )
 
@@ -202,13 +204,17 @@ create_inla_mesh <- function(x, y) {
   # Calculate max.edge using the factor
   max_edge <- max_range / opts$`max-edge-factor`
 
-  # Calculate cutoff
-  cutoff <- max(max_edge / opts$`mesh-resolution`, 1e-5)
+  # Calculate cutoff (use provided value or auto-calculate)
+  cutoff <- if (!is.null(opts$`mesh-cutoff`)) {
+    opts$`mesh-cutoff`
+  } else {
+    max(max_edge / opts$`mesh-resolution`, 1e-5)
+  }
   
   cat("Mesh parameters:\n")
   cat("  max_edge:", max_edge, "\n")
   cat("  cutoff:", cutoff, "\n")
-  cat("  mesh_resolution:", opts$`mesh-resolution`, "\n")
+  cat("  mesh_resolution:", if (is.null(opts$`mesh-cutoff`)) opts$`mesh-resolution` else "N/A (manual cutoff)", "\n")
 
   # Create mesh with new parameters
   mesh <- tryCatch(

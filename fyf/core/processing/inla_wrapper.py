@@ -84,18 +84,16 @@ class INLAWrapper:
             cmd = ["Rscript", str(self.r_script_path)]
             
             # Add INLA configuration parameters
-            if config.shape != "none":
-                cmd.extend(["--shape", config.shape])
-            if config.mesh_cutoff is not None:
-                cmd.extend(["--mesh-cutoff", str(config.mesh_cutoff)])
             if config.tolerance != 1e-4:
                 cmd.extend(["--tolerance", str(config.tolerance)])
             if config.restart != 0:
                 cmd.extend(["--restart", str(config.restart)])
             if config.scaling:
-                cmd.append("--scaling")
+                cmd.extend(["--scaling", config.scaling])
             if config.nonstationary:
                 cmd.append("--nonstationary")
+            if config.mesh_cutoff is not None:
+                cmd.extend(["--mesh-cutoff", str(config.mesh_cutoff)])
             
             # Run the R script
             subprocess.run(cmd, check=True)

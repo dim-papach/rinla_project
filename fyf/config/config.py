@@ -137,11 +137,11 @@ class INLAConfig:
     max_edge_factor: float = 10.0
     """Controls maximum triangle edge length in mesh.
     max_edge = max(image_width, image_height) / max_edge_factor
-    Smaller factor = finer mesh = more computation time.
+    Larger factor = finer mesh = more computation time.
     For astronomical images:
-    - 5-8: Fine mesh (high resolution objects)
+    - 5-8: Coarse mesh (large scale structure only)
     - 10-15: Medium mesh (typical use)
-    - 20+: Coarse mesh (large scale structure only)
+    - 20+: Fine mesh (high resolution objects)
     Default: 10.0
     """
     
@@ -174,8 +174,8 @@ class INLAConfig:
     
     alpha: int = 2
     """Smoothness parameter for the Matérn covariance function.
-    - 1: Less smooth, more jagged spatial field (ν = 1/2)
-    - 2: Smoother spatial field (ν = 3/2)
+    - 1: Less smooth, more jagged spatial field (ν = 0)
+    - 2: Smoother spatial field (ν = 1)
     For astronomical images, α=2 usually works well.
     Only values 1 and 2 are supported.
     Default: 2
@@ -251,12 +251,12 @@ class INLAConfig:
     Default: 2
     """
     
-    spline_degree: int = 10
+    spline_degree: int = 3
     """Degree of B-spline basis functions for non-stationary model.
     Only used if nonstationary=True.
     Controls smoothness of parameter variation.
-    - 5-10: Smooth variation
-    - 10-20: Medium smoothness
-    - 20+: Very smooth (may be too rigid)
-    Default: 10
+    - 1: Linear variation
+    - 2-3: Quadratic or Cubic (Standard)
+    - 4+: Highly smooth, computationally intensive
+    Default: 3
     """
