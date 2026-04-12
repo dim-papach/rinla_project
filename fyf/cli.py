@@ -322,7 +322,7 @@ def _build_inla_config(process_config: Dict[str, Any]) -> INLAConfig:
         num_threads=process_config.get('num_threads', 6),
         openmp_strategy=process_config.get('openmp_strategy', 'huge'),
         nbasis=process_config.get('nbasis', 2),
-        spline_degree=process_config.get('spline_degree', 10),
+        spline_degree=process_config.get('spline_degree', 3),
         tolerance=process_config.get('tolerance', 1e-4),
         restart=process_config.get('restart', 0)
     )

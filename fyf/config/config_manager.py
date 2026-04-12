@@ -62,7 +62,7 @@ class ConfigManager:
                 
                 # Non-stationary parameters
                 "nbasis": 2,
-                "spline_degree": 10
+                "spline_degree": 3
             },
 
             "validate": {
@@ -173,7 +173,7 @@ class ConfigManager:
             
             # Non-stationary parameters
             nbasis=process_cfg.get("nbasis", 2),
-            spline_degree=process_cfg.get("spline_degree", 10)
+            spline_degree=process_cfg.get("spline_degree", 3)
         )
         
         plot_config = PlotConfig(
