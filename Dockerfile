@@ -6,7 +6,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
     LANG=en_US.UTF-8 \
     LC_ALL=en_US.UTF-8 \
     PYTHONUNBUFFERED=1 \
-    RETICULATE_PYTHON=/usr/bin/python3
+    RETICULATE_PYTHON=/opt/venv/bin/python
 
 # Install system dependencies
 # Added libraries often needed for rgl, imager, and text shaping
@@ -28,9 +28,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpng-dev \
     glibc-source \
     && rm -rf /var/lib/apt/lists/*
-
+# Create a virtual environment
+RUN python3 -m venv /opt/venv
+# Ensure we use the virtualenv
+ENV PATH="/opt/venv/bin:$PATH"
 # Install Python packages
-RUN pip3 install --break-system-packages --no-cache-dir \
+RUN pip install --no-cache-dir\
     numpy \
     pandas \
     matplotlib \
@@ -120,7 +123,7 @@ WORKDIR /app
 COPY . /app
 
 # Install the local fyf package in editable mode
-RUN pip3 install --break-system-packages -e .
+RUN pip install -e .
 
 # Create directory for data mounting
 RUN mkdir -p /data
