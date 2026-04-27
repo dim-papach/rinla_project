@@ -16,9 +16,9 @@ from skimage.metrics import structural_similarity as ssim_metric
 
 # Parameters to grid search
 param_grid = {
-    'shape': ['none']
+    'shape': ['none'],
     'mesh-resolution': [20, 30, 40],
-    'scaling': ['log']
+    'scaling': ['log'],
     'max-edge-factor': [8, 10, 12],
     'outer-edge-factor': [1.2, 1.5, 2.0],
     'offset-inner-factor': [0.1, 0.5, 0.8],
@@ -55,9 +55,9 @@ def run_docker_fyf(args):
         args.insert(1, "-v")
         
     cmd = [
-        "docker", "run", "--rm",
-        "-v", f"{cwd}:/data",
-        "fyf"
+        "podman", "run", "--rm",
+        "-v", f"{cwd}:/data:z",
+        "localhost/fyf"
     ] + args
     
     logger.debug(f"Executing: {' '.join(cmd)}")
